@@ -1,6 +1,12 @@
 .venv/
 .idea/
+
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+
 .env
 .DS_Store
