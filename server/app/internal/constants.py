@@ -4,6 +4,7 @@ DOC_INTEL_ENDPOINT = "https://tfg-sintrom.cognitiveservices.azure.com/"
 
 #Nome do segredo a recuperar
 SECRET_NAME = "key-document-intelligence"
+FIREBASE_NAME = "FIREBASE-CREDENTIALS"
 
 #Nome do modelo adestrado que imos a empregar
 MODEL_ID = "M2"
