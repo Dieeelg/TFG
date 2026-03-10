@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.dependencies import lifespan
 from app.routers.extraccion import router as extraccion_router
 from app.routers.system import router as system_router
+from app.routers.notificar import router as notificar_router
 import logging
 
 
@@ -31,3 +32,4 @@ app.add_middleware(
 
 app.include_router(extraccion_router)
 app.include_router(system_router)
+app.include_router(notificar_router)

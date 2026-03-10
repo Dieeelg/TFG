@@ -44,3 +44,12 @@ class HealthResponse(BaseModel):
 
 class ErrorResponse(BaseModel):
     detail: str= Field(..., description="Detalles do erro acontecido")
+
+class NotificacionP2P(BaseModel):
+    token_destino: str = Field(...,description="Token FMC do destino")
+    payload: str = Field(...,description="Datos a enviar polo móbil de orixen cifrados ")
+    tipo_aviso: str = Field(...,description="Tipo de mensaxe a enviar")
+
+class NotificacionResponse(BaseModel):
+    success: bool
+    message_id: str
