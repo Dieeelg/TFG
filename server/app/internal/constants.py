@@ -7,7 +7,7 @@ SECRET_NAME = "key-document-intelligence"
 FIREBASE_NAME = "FIREBASE-CREDENTIALS"
 
 #Nome do modelo adestrado que imos a empregar
-MODEL_ID = "M2"
+MODEL_ID = "M1"
 
 #Columnas da táboa de dose
 DOSE_COLS = ["LUNES", "MARTES", "MIERCOLES", "JUEVES", "VIERNES", "SÁBADO", "DOMINGO"]

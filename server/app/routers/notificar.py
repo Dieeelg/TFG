@@ -12,11 +12,22 @@ router = APIRouter(
 @router.post("/enviar", response_model=NotificacionResponse)
 async def enviar_notif(data: NotificacionP2P):
     try:
+        textos = {
+            "TOMA_CONFIRMADA": ("Toma confirmada", "A persoa supervisada confirmou a toma."),
+            "NOVO_INFORME": ("Novo informe", "Actualizouse a folla de tratamento."),
+            "TOMA_PENDENTE": ("Hora da toma", "Hai unha toma pendente de confirmar."),
+            "TOMA_ESQUECIDA": ("Toma sen confirmar", "A toma segue sen confirmarse."),
+        }
+        titulo_corpo = textos.get(data.tipo_aviso)
         message = messaging.Message(
             data = {
                 "payload": data.payload,
                 "tipo_aviso": data.tipo_aviso,
             },
+            notification=(
+                messaging.Notification(title=titulo_corpo[0], body=titulo_corpo[1])
+                if titulo_corpo else None
+            ),
             token= data.token_destino,
         )
         response = messaging.send(message)

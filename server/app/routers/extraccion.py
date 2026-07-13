@@ -85,7 +85,8 @@ async def iniciar_extraccion(file: UploadFile = File(... ,description="Imaxe ou 
         ocr_operation = client.begin_analyze_document(
             model_id=MODEL_ID,
             body=image_content,
-            content_type="application/octet-stream"
+            content_type="application/octet-stream",
+            locale="es-ES"
         )
 
         result = ocr_operation.result()
