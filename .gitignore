@@ -59,3 +59,10 @@ client/.dart_tool/
 client/build/
 client/.flutter-plugins
 
+# Local Firebase configuration
+client/ios/Runner/GoogleService-Info.plist
+client/android/app/google-services.json
+
+# Generated Android reports
+client/android/build/reports/
+
