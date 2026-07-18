@@ -1,4 +1,4 @@
-class DoseDiaModel{
+class DoseDiaModel{ // Dose pautada para un día.
   final String data;
   final int dia;
   final String? dose; //Recordemos que dose pode ser null por que o día do control non ten dose.

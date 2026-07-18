@@ -1,9 +1,10 @@
-class AppConstants {
-  static const String baseUrl = "http://192.168.33.133:8081";
+class AppConstants { // Constantes xerais da aplicación.
+  static const String baseUrl = "https://apisintrom.08022003.xyz";
 
   //Endpoints da API
   static const String endpointExtraccion = "/extraccion/";
   static const String endpointHealth = "/health/";
   static const String endpointEnviarNotif = "/notificar/enviar";
+  static const String endpointCentro = "/centros/buscar";
 
 }

@@ -1,18 +1,19 @@
-import 'cabeceira_model.dart';
-import 'dose_dia_model.dart';
-import 'historico_model.dart';
+import 'cabeceira.dart';
+import 'dose_dia.dart';
+import 'historico.dart';
 
 class AnaliseModel{
   final CabeceiraModel cabeceira;
   final List<DoseDiaModel> calendario;
   final List<ItemHistoricoModel> historico;
 
-  AnaliseModel({
+  AnaliseModel({ //Constructor
     required this.cabeceira,
     required this.calendario,
     required this.historico,
   });
 
+  //Trducimos os datos que recibimos da API aos nosos modelos Dart
   factory AnaliseModel.fromJson(Map<String, dynamic> json) {
     return AnaliseModel(
       cabeceira: CabeceiraModel.fromJson(json['cabeceira']),
