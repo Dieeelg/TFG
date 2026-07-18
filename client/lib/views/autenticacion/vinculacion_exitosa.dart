@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart'; // Confirmación da vinculación.
 
 class VinculacionExitosaScreen extends StatelessWidget {
   const VinculacionExitosaScreen({super.key});
@@ -28,7 +28,11 @@ class VinculacionExitosaScreen extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
+                  onPressed: () => Navigator.pushNamedAndRemoveUntil(
+                    context,
+                    '/coidador',
+                    (route) => false,
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue,
                     padding: const EdgeInsets.symmetric(vertical: 16),

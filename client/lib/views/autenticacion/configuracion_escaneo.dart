@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart'; // Selección de quen escanea.
 import 'package:provider/provider.dart';
-import '../../viewmodels/auth/setup_escanear_viewmodel.dart';
+import '../../modelos_vista/autenticacion/configuracion_escaneo.dart';
 
 class SetupEscanearScreen extends StatelessWidget {
   const SetupEscanearScreen({super.key});
@@ -38,7 +38,7 @@ class SetupEscanearScreen extends StatelessWidget {
                 onTap: () async {
                   await vm.seleccionarPreferencia(true);
                   if (context.mounted) {
-                    Navigator.pushReplacementNamed(context, '/home'); // Á home final
+                    Navigator.pushReplacementNamed(context, '/configuracion_adicional');
                   }
                 },
               ),
@@ -53,7 +53,11 @@ class SetupEscanearScreen extends StatelessWidget {
                 onTap: () async {
                   await vm.seleccionarPreferencia(false);
                   if (context.mounted) {
-                    Navigator.pushReplacementNamed(context, '/home');
+                    Navigator.pushNamedAndRemoveUntil(
+                      context,
+                      '/home',
+                      (route) => false,
+                    );
                   }
                 },
               ),
@@ -75,10 +79,10 @@ class SetupEscanearScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.blue.withOpacity(0.2)),
+        border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),

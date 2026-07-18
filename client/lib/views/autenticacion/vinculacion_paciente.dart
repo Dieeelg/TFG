@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart'; // Vinculación desde o paciente.
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import '../../viewmodels/auth/vinculacion_paciente_viewmodel.dart';
-import 'setup_scanear_screen.dart';
+import '../../modelos_vista/autenticacion/vinculacion_paciente.dart';
+import 'configuracion_escaneo.dart';
 
 class VinculacionScreen extends StatefulWidget {
   const VinculacionScreen({super.key});
@@ -50,7 +50,6 @@ class _VinculacionScreenState extends State<VinculacionScreen> {
 
                   const Spacer(),
 
-                  // --- ÁREA DO QR ---
                   if (vm.cargando)
                     const SizedBox(
                       height: 250,
@@ -66,7 +65,7 @@ class _VinculacionScreenState extends State<VinculacionScreen> {
                           BoxShadow(color: Colors.black12, blurRadius: 15, offset: Offset(0, 5))
                         ],
                       ),
-                      child: QrImageView(
+                      child: QrImageView( //Xeramos o QR
                         data: vm.datosQR!,
                         version: QrVersions.auto,
                         size: 250.0,
@@ -82,13 +81,12 @@ class _VinculacionScreenState extends State<VinculacionScreen> {
 
                   const SizedBox(height: 24),
 
-                  // --- BOTÓN PRINCIPAL (DINÁMICO) ---
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: vm.tenCoidador
                           ? () {
-                        // Se hai coidador, imos á pantalla de decidir quen escanea
+                        // Se hai coidador imos á pantalla de decidir quen escanea
                         Navigator.push(
                           context,
                           MaterialPageRoute(builder: (context) => const SetupEscanearScreen()),
@@ -132,12 +130,12 @@ class _VinculacionScreenState extends State<VinculacionScreen> {
                   const SizedBox(height: 12),
 
                   // --- BOTÓN PARA SALTAR ---
-                  // Solo o mostramos se aínda non se vinculou ninguén
+                  // Só o mostramos se aínda non se vinculou ninguén
                   if (!vm.tenCoidador) _buildBotonSaltar(context, vm),
 
                   const SizedBox(height: 10),
 
-                  // Refresco manual opcional (por se o Timer fallase)
+                  // Refresco manual por se o timer non funciona
                   if (!vm.tenCoidador)
                     TextButton(
                       onPressed: () => vm.comprobarEstadoVinculacion(),
@@ -184,13 +182,12 @@ class _VinculacionScreenState extends State<VinculacionScreen> {
   Widget _buildBotonSaltar(BuildContext context, VinculacionPacienteViewModel vm) {
     return TextButton(
       onPressed: () async {
-        // 1. Gardamos que o paciente escanea el mesmo por defecto (sen preguntar)
+        //Gardamos que o paciente escanea el mesmo por defecto
         await vm.configurarEscaneoAutomaticoPaciente();
 
         if (context.mounted) {
-          debugPrint("Saltando directo á Home: O paciente será o encargado de escanear.");
-          // Aquí podes usar Navigator.pushReplacementNamed(context, '/home')
-          // ou navegar ao widget da túa Home directamente.
+          debugPrint("Saltando directo á Home");
+          Navigator.pushReplacementNamed(context, '/configuracion_adicional');
         }
       },
       child: const Text(

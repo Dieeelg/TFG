@@ -1,20 +1,19 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart'; // Estado da vinculación do paciente.
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:async';
 
 class VinculacionPacienteViewModel extends ChangeNotifier {
-  String? _datosQR;
+
+  String? _datosQR; //A información que conterá o QR
   bool _cargando = false;
-
-  Timer? _timer;
-
+  Timer? _timer; //Para comprobar se xa se escaneou o QR ou non
   final _storage = const FlutterSecureStorage();
   bool _tenCoidador = false;
 
-  bool get tenCoidador => _tenCoidador;
 
+  bool get tenCoidador => _tenCoidador;
   String? get datosQR => _datosQR;
   bool get cargando => _cargando;
 
@@ -23,14 +22,14 @@ class VinculacionPacienteViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final user = FirebaseAuth.instance.currentUser;
+      final user = FirebaseAuth.instance.currentUser;  //Pedimoslle a firebase o noso UID
       final String uid = user?.uid ?? "sen_id";
 
-      String? token = await FirebaseMessaging.instance.getToken();
+      String? token = await FirebaseMessaging.instance.getToken(); //Pedimos o token para enviar mensaxes
 
-      _datosQR = "$uid|${token ?? 'sen_token'}";
+      _datosQR = "$uid|${token ?? 'sen_token'}"; //Creamos a cadea de datos que vai conter o QR
 
-      _iniciarChequeoAutomatico();
+      _iniciarChequeoAutomatico(); //Unha vez temos os datos do QR comezamos a comprobar se xa se escaneou ou non
 
     } catch (e) {
       _datosQR = "erro_datos";
@@ -40,7 +39,7 @@ class VinculacionPacienteViewModel extends ChangeNotifier {
     }
   }
 
-  void _iniciarChequeoAutomatico() {
+  void _iniciarChequeoAutomatico() { //Miramos cada dous segundos se xa esta no storage o UID do coidador
     _timer?.cancel(); // Cancelamos se houbera un previo
     _timer = Timer.periodic(const Duration(seconds: 2), (timer) async {
       await comprobarEstadoVinculacion();
@@ -59,14 +58,14 @@ class VinculacionPacienteViewModel extends ChangeNotifier {
   }
 
   @override
-  void dispose() {
-    _timer?.cancel(); // Importante: limpar o timer ao saír da pantalla
+  void dispose() { //Para eliminar o timer unha vez se salga da pantalla de vinculación
+    _timer?.cancel();
     super.dispose();
   }
 
   Future<void> configurarEscaneoAutomaticoPaciente() async {
     // Se salta a vinculación, asumimos que o paciente escanea el mesmo
-    await _storage.write(key: 'quene_escanea', value: 'PACIENTE');
+    await _storage.write(key: 'quen_escanea', value: 'PACIENTE');
     notifyListeners();
   }
 }

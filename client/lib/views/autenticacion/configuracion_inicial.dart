@@ -1,11 +1,40 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart'; // Inicio da configuración.
 import 'package:provider/provider.dart';
-import '../../viewmodels/auth/setup_viewmodel.dart';
-import 'vinculacion_paciente_screen.dart';
-import 'vinculacion_coidador_screen.dart';
+import '../../modelos_vista/autenticacion/configuracion_inicial.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'vinculacion_paciente.dart';
+import 'vinculacion_coidador.dart';
 
 class SetupScreen extends StatelessWidget {
   const SetupScreen({super.key});
+
+  Future<void> _manexarSeleccion(BuildContext context, bool esPaciente) async {
+    final vm = context.read<SetupViewModel>();
+
+    final resultado = await vm.autenticar();
+
+    if (!context.mounted) return;
+
+    if (resultado == AuthResult.exito) {
+      await const FlutterSecureStorage().write(
+        key: 'rol_usuario',
+        value: esPaciente ? 'PACIENTE' : 'COIDADOR',
+      );
+      if (!context.mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => esPaciente
+              ? const VinculacionScreen()
+              : const VincularCoidadorScreen(),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Erro ao conectar con Firebase")),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,63 +46,31 @@ class SetupScreen extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24.0),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const SizedBox(height: 60),
-              const Text(
-                'Benvido',
-                style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-              ),
+              const Text('Benvido',
+                  style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
               const SizedBox(height: 12),
-              const Text(
-                'Quen vai usar a aplicación?',
-                style: TextStyle(fontSize: 18, color: Color(0xFF34495E)),
-              ),
+              const Text('Quen vai usar a aplicación?',
+                  style: TextStyle(fontSize: 18, color: Color(0xFF34495E))),
               const SizedBox(height: 40),
 
-              // Tarxeta para o Paciente
               _buildOptionCard(
-                context,
                 title: 'Para min',
                 subtitle: 'Vou xestionar o meu propio tratamento.',
                 icon: Icons.person_outline,
                 estaCargando: setupVM.estaCargando,
-                onTap: () async {
-                  final exito = await setupVM.iniciarSesionPaciente();
-                  if (exito && context.mounted) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const VinculacionScreen()),
-                    );
-                  } else if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Erro ao conectar con Firebase")),
-                    );
-                  }
-                },
+                onTap: () => _manexarSeleccion(context, true),
               ),
 
               const SizedBox(height: 20),
 
-              // Tarxeta para o Coidador
               _buildOptionCard(
-                context,
                 title: 'Para outra persoa',
                 subtitle: 'Vou axudar a outra persoa co seu tratamento.',
                 icon: Icons.people_outline,
-                onTap: () async {
-                  final exito = await setupVM.iniciarSesionPaciente();
-
-                  if (exito && context.mounted){
-                    Navigator.push(
-                      context, MaterialPageRoute(builder: (context) => const VincularCoidadorScreen()),
-                    );
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Erro ao conectar con Firebase")),
-                    );
-                  }
-                },
+                estaCargando: setupVM.estaCargando,
+                onTap: () => _manexarSeleccion(context, false),
               ),
             ],
           ),
@@ -81,15 +78,13 @@ class SetupScreen extends StatelessWidget {
       ),
     );
   }
-
-  Widget _buildOptionCard(
-      BuildContext context, {
-        required String title,
-        required String subtitle,
-        required IconData icon,
-        required VoidCallback onTap,
-        bool estaCargando = false,
-      }) {
+  Widget _buildOptionCard({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required VoidCallback onTap,
+    bool estaCargando = false,
+  }) {
     return SizedBox(
       width: double.infinity,
       child: Opacity(
@@ -97,10 +92,10 @@ class SetupScreen extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.blue.withOpacity(0.2)),
+            border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
