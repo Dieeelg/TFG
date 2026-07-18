@@ -1,19 +1,20 @@
-import 'dart:math';
+import 'dart:math'; // Representación gráfica dunha dose.
 import 'package:flutter/material.dart';
 
 class DoseVisual extends CustomPainter {
   final double dose; // Ex: 0.75 para 3/4
+  final Color color;
 
-  DoseVisual(this.dose);
+  DoseVisual(this.dose, {this.color = Colors.blue});
 
   @override
   void paint(Canvas canvas, Size size) {
     final paintBase = Paint()
-      ..color = Colors.blue.withOpacity(0.2)
+      ..color = color.withValues(alpha: 0.2)
       ..style = PaintingStyle.fill;
 
     final paintDose = Paint()
-      ..color = Colors.blue
+      ..color = color
       ..style = PaintingStyle.fill;
 
     final center = Offset(size.width / 2, size.height / 2);
