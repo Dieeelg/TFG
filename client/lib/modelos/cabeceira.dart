@@ -1,4 +1,4 @@
-class CabeceiraModel {
+class CabeceiraModel { // Datos xerais do informe.
   final String? dataInforme;
   final String? inr;
   final String? farmaco;
