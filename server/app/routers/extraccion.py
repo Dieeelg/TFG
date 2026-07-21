@@ -9,6 +9,7 @@ from app.schemas.models import AnalisisResponse, ErrorResponse, CabeceiraRespons
 from app.internal.logic import extraer_data, calcular_confianza_media, parsear_data, parse_dose_cell, \
     extraer_dose_semanal
 from app.internal.constants import MODEL_ID, DOSE_COLS, INR_MIN_LOGICO, INR_MAX_LOGICO
+from app.internal.preprocesamento import preprocesar_documento
 
 
 router = APIRouter(
@@ -70,7 +71,7 @@ async def iniciar_extraccion(file: UploadFile = File(... ,description="Imaxe ou 
     e devolve un JSON coa información relevante limpa para a nosa app.
     """
 
-    if file.content_type not in ["image/jpeg", "image/png", "image/heic", "application/pdf", "application/octet-stream"]:
+    if file.content_type not in ["image/jpeg", "image/png", "image/heic", "image/heif", "application/pdf", "application/octet-stream"]:
         raise HTTPException(
             status_code=400,
             detail=f"Tipo de ficheiro non soportado: {file.content_type}"
@@ -79,7 +80,17 @@ async def iniciar_extraccion(file: UploadFile = File(... ,description="Imaxe ou 
     try:
         #Leemos o ficheiro que envoiu o usurio
         image_content = await file.read()
-        logging.info(f"iniciando o análise da imaxe")
+        resultado_preprocesamento = preprocesar_documento(image_content, file.content_type)
+        image_content = resultado_preprocesamento.contido
+        logging.info(
+            "Preprocesamento do documento: metodo=%s, aplicado=%s, angulo=%s, confianza=%s, motivo=%s",
+            resultado_preprocesamento.metodo,
+            resultado_preprocesamento.aplicado,
+            resultado_preprocesamento.angulo,
+            resultado_preprocesamento.confianza,
+            resultado_preprocesamento.motivo,
+        )
+        logging.info("Iniciando a análise do documento")
 
         #Chamamos ao modelo de Azure
         ocr_operation = client.begin_analyze_document(
