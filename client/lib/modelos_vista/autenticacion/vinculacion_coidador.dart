@@ -1,7 +1,10 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart'; // Estado da vinculación do coidador.
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import '../../services/api_service.dart';
+import '../../servizos/servizo_api.dart';
+import '../../servizos/servizo_base_datos.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:convert';
 
 class VinculacionCoidadorViewModel extends ChangeNotifier {
   final ApiService _apiService = ApiService();
@@ -24,6 +27,7 @@ class VinculacionCoidadorViewModel extends ChangeNotifier {
     _erro = "A API non está dispoñible. Comproba a túa conexión.";
     return false;
     }
+    // LECTURA DE QR: Separa o QR polo símbolo '|' e garda o UID e o TOKEN do paciente na nosa memoria segura.
 
     final partes = codigoQR.split('|');
     if (partes.length < 2) {
@@ -35,20 +39,31 @@ class VinculacionCoidadorViewModel extends ChangeNotifier {
     final tokenPaciente = partes[1];
 
 
-    await _storage.write(key: 'paciente_vinculado_uid', value: uidPaciente);
-    await _storage.write(key: 'paciente_vinculado_token', value: tokenPaciente);
+    await DatabaseService().gardarPacienteCoidador(
+      uid: uidPaciente,
+      token: tokenPaciente,
+    );
 
-
+    //Ocoidador pídelle a Firebase cal é o seu token.
     String? oMeuToken = await FirebaseMessaging.instance.getToken();
 
+    //Unha vez btido enviaselle unha notificación ao paciente
     final exitoSaudo = await _apiService.enviarNotificacion(
     tokenDestino: tokenPaciente,
-    payload: oMeuToken ?? "",
+    payload: jsonEncode({
+      'token': oMeuToken ?? '',
+      'coidadorUid': FirebaseAuth.instance.currentUser?.uid,
+    }),
     tipoAviso: "VINCULACION_INICIAL",
     );
 
     if (!exitoSaudo) {
     _erro = "Non se puido completar a vinculación co paciente.";
+    }
+
+    if (exitoSaudo) {
+      await _storage.write(key: 'configuracion_finalizada', value: 'true');
+      await _storage.write(key: 'rol_usuario', value: 'COIDADOR');
     }
 
     return exitoSaudo;

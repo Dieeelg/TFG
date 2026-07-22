@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart'; // Vinculación desde o coidador.
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
-import 'package:tfg_sintrom/views/auth/vinculacion_exitosa_screen.dart';
-import '../../viewmodels/auth/vinculacion_coidador_viewmodel.dart';
+import 'vinculacion_exitosa.dart';
+import '../../modelos_vista/autenticacion/vinculacion_coidador.dart';
 
 class VincularCoidadorScreen extends StatefulWidget {
   const VincularCoidadorScreen({super.key});

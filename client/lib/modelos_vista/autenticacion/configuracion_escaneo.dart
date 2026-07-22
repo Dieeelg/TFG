@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart'; // Estado da selección de escaneo.
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SetupEscanearViewModel extends ChangeNotifier {
@@ -16,12 +16,17 @@ class SetupEscanearViewModel extends ChangeNotifier {
     try {
       // Gardamos localmente: 'paciente' ou 'coidador'
       await _storage.write(
-          key: 'quene_escanea',
+          key: 'quen_escanea',
           value: euMesmo ? 'PACIENTE' : 'COIDADOR'
       );
 
-      // Aquí poderiamos facer unha chamada á túa API se queres que
-      // o servidor tamén saiba esta preferencia.
+      if (euMesmo) {
+        // Aínda falta indicar o nome e a hora da toma.
+        await _storage.delete(key: 'configuracion_finalizada');
+      } else {
+        // Se escanea outra persoa, non precisamos configurar a hora neste dispositivo.
+        await _storage.write(key: 'configuracion_finalizada', value: 'true');
+      }
 
     } catch (e) {
       debugPrint("Erro ao gardar preferencia de escaneo: $e");
