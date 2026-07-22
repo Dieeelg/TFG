@@ -1,16 +1,30 @@
-import 'dart:convert';
+import 'dart:convert'; // Servizo de comunicación coa API.
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import '../core/constants.dart';
-import '../models/analise_model.dart';
+import '../nucleo/constantes.dart';
+import '../modelos/analise.dart';
 
 class ApiService{
+
+  //Obter a información do centro de sañude.
+  Future<Map<String, dynamic>> buscarCentro(String nome) async {
+    //Formamos a URI
+    final uri = Uri.parse('${AppConstants.baseUrl}${AppConstants.endpointCentro}').replace(queryParameters: {'nome': nome});
+    final response = await http.get(uri);
+
+    if (response.statusCode != 200) {
+      final data = json.decode(response.body);
+      throw Exception(data['detail'] ?? 'Non se puido atopar o centro');
+    }
+    return json.decode(response.body) as Map<String, dynamic>;
+  }
 
   //Comprobamos que a API é alcanzable
   Future<bool> checkHealth() async {
     try {
       final response = await http.get(
-          Uri.parse('${AppConstants.baseUrl}${AppConstants.endpointHealth}') //Formamos a URI  conmpleta co endpoint de health
+          Uri.parse('${AppConstants.baseUrl}${AppConstants.endpointHealth}')
       );
       return response.statusCode == 200;
     } catch (e) {
@@ -29,7 +43,7 @@ class ApiService{
 
     try{
       final partialResponse = await request.send();
-      final response = await http.Response.fromStream(partialResponse);
+      final response = await http.Response.fromStream(partialResponse); //Agrupamos todas as respostas aprciais
 
       if(response.statusCode == 200){
         final Map<String, dynamic> data = json.decode(response.body);
@@ -63,7 +77,7 @@ class ApiService{
       );
       return response.statusCode == 200;
     } catch (e) {
-      print("Erro en ApiService (Notificación): $e");
+      debugPrint("Erro en ApiService (Notificación): $e");
       return false;
     }
   }
