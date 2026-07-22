@@ -108,6 +108,38 @@ class TestPreprocesamento(unittest.TestCase):
         )
         self.assertFalse(segunda_pasada.aplicado)
 
+    def test_corrixe_unha_inclinacion_superior_a_quince_graos(self):
+        entrada = _codificar(_rotar(_crear_folla(), 24.0))
+
+        resultado = preprocesar_documento(entrada, "image/png", activado=True)
+
+        self.assertTrue(resultado.aplicado)
+        self.assertGreater(abs(resultado.angulo), 15.0)
+        self.assertLessEqual(abs(resultado.angulo), 30.0)
+
+    def test_detecta_unha_folla_clara_sobre_un_fondo_con_cor(self):
+        folla = _crear_folla(430, 610)
+        orixe = np.float32([[0, 0], [429, 0], [429, 609], [0, 609]])
+        destino = np.float32([[230, 120], [670, 245], [520, 855], [75, 710]])
+        matriz = cv2.getPerspectiveTransform(orixe, destino)
+        fondo = np.full((940, 760, 3), (55, 105, 150), dtype=np.uint8)
+        deformada = cv2.warpPerspective(
+            folla,
+            matriz,
+            (760, 940),
+            dst=fondo,
+            borderMode=cv2.BORDER_TRANSPARENT,
+        )
+        entrada = _codificar(deformada, ".jpg")
+
+        with patch("app.internal.preprocesamento._buscar_folla", return_value=None):
+            resultado = preprocesar_documento(entrada, "image/jpeg", activado=True)
+
+        self.assertTrue(resultado.aplicado)
+        self.assertEqual(resultado.metodo, "perspectiva")
+        self.assertEqual(resultado.motivo, "silueta_clara_da_folla")
+        self.assertLess(len(resultado.contido), len(entrada))
+
     def test_corrixe_perspectiva_cando_detecta_os_catro_bordos(self):
         folla = _crear_folla(500, 700)
         orixe = np.float32([[0, 0], [499, 0], [499, 699], [0, 699]])
@@ -148,6 +180,30 @@ class TestPreprocesamento(unittest.TestCase):
         self.assertFalse(segunda_pasada.aplicado)
         self.assertEqual(segunda_pasada.contido, resultado.contido)
 
+    def test_un_xiro_amplo_reduce_o_recheo_sen_recortar_en_exceso(self):
+        sen_bordo = _crear_folla(con_bordo=False)
+        inclinada = _rotar(sen_bordo, -24.0)
+        entrada = _codificar(inclinada)
+
+        with patch("app.internal.preprocesamento._buscar_folla", return_value=None), patch(
+            "app.internal.preprocesamento._buscar_folla_clara",
+            return_value=None,
+        ):
+            resultado = preprocesar_documento(entrada, "image/png", activado=True)
+
+        self.assertTrue(resultado.aplicado)
+        self.assertEqual(resultado.metodo, "inclinacion")
+        ancho, alto = resultado.dimensions_orixinais
+        radians = np.radians(resultado.angulo)
+        ancho_expandido = int(np.ceil(alto * abs(np.sin(radians)) + ancho * abs(np.cos(radians))))
+        alto_expandido = int(np.ceil(alto * abs(np.cos(radians)) + ancho * abs(np.sin(radians))))
+        self.assertLess(
+            resultado.dimensions_saida[0] * resultado.dimensions_saida[1],
+            ancho_expandido * alto_expandido,
+        )
+        self.assertGreaterEqual(resultado.dimensions_saida[0], 0.72 * ancho)
+        self.assertGreaterEqual(resultado.dimensions_saida[1], 0.72 * alto)
+
     def test_non_confunde_un_panel_interno_co_bordo_do_papel(self):
         panel = _crear_folla(600, 760)
         panel = (panel.astype(np.float32) * 0.92).astype(np.uint8)
@@ -180,12 +236,35 @@ class TestPreprocesamento(unittest.TestCase):
         self.assertTrue(correcto)
         entrada = datos.tobytes()
 
-        with patch.dict(os.environ, {"PREPROCESS_MAX_BYTES": "90000"}):
+        limite = len(entrada) + 100
+        with patch.dict(os.environ, {"PREPROCESS_MAX_BYTES": str(limite)}):
             resultado = preprocesar_documento(entrada, "image/jpeg", activado=True)
 
         self.assertFalse(resultado.aplicado)
         self.assertEqual(resultado.contido, entrada)
-        self.assertLessEqual(len(resultado.contido), 90000)
+        self.assertLessEqual(len(resultado.contido), limite)
+
+    def test_pode_reducir_unha_entrada_maior_ca_o_limite(self):
+        folla = _crear_folla(430, 610)
+        orixe = np.float32([[0, 0], [429, 0], [429, 609], [0, 609]])
+        destino = np.float32([[210, 105], [665, 205], [540, 845], [85, 710]])
+        matriz = cv2.getPerspectiveTransform(orixe, destino)
+        deformada = cv2.warpPerspective(
+            folla,
+            matriz,
+            (760, 940),
+            borderValue=(65, 110, 155),
+        )
+        jpeg = _codificar(deformada, ".jpg")
+        entrada = jpeg + b"datos-de-recheo" * 20_000
+        limite = len(jpeg) + 40_000
+        self.assertGreater(len(entrada), limite)
+
+        with patch.dict(os.environ, {"PREPROCESS_MAX_BYTES": str(limite)}):
+            resultado = preprocesar_documento(entrada, "image/jpeg", activado=True)
+
+        self.assertTrue(resultado.aplicado)
+        self.assertLessEqual(len(resultado.contido), limite)
 
     def test_non_expande_a_rotacion_por_riba_do_limite(self):
         sen_bordo = _crear_folla(con_bordo=False)

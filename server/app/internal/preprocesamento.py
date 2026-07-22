@@ -20,8 +20,11 @@ MAX_DIMENSION_DETECCION = 1600
 MIN_DIMENSION_IMAXE = 160
 MIN_AREA_FOLLA = 0.38
 MAX_AREA_FOLLA = 0.96
-MIN_ANGULO_CORRECCION = 0.7
-MAX_ANGULO_CORRECCION = 15.0
+MIN_AREA_FOLLA_CLARA = 0.24
+MAX_AREA_FOLLA_CLARA = 0.82
+MIN_ANGULO_CORRECCION = 1.0
+MAX_ANGULO_PERSPECTIVA = 15.0
+MAX_ANGULO_INCLINACION = 30.0
 MAX_PIXELES_PREPROCESAMENTO = 30_000_000
 MAX_LADO_AZURE = 10_000
 MAX_BYTES_PREDETERMINADOS = 3_900_000
@@ -71,9 +74,6 @@ def preprocesar_documento(
     if tipo and not (tipo.startswith("image/") or tipo == "application/octet-stream"):
         return _sen_cambios(contido, "tipo_non_soportado")
 
-    if len(contido) > _limite_bytes_saida():
-        return _sen_cambios(contido, "ficheiro_supera_limite_preprocesamento")
-
     try:
         datos = np.frombuffer(contido, dtype=np.uint8)
         imaxe = cv2.imdecode(datos, cv2.IMREAD_COLOR)
@@ -103,11 +103,31 @@ def preprocesar_documento(
             if resultado is not None:
                 return resultado
 
+        # Nunha fotografía real os bordos do papel poden ser suaves ou quedar
+        # interrompidos por sombras. Como segunda vía búscase unha superficie
+        # clara, pouco saturada e cunha xeometría compatible cunha folla. Esta
+        # detección mantén requisitos de bordo e contraste para non confundir
+        # unha zona branca da propia impresión coa silueta exterior.
+        candidato_claro = _buscar_folla_clara(imaxe_deteccion, gris, bordos)
+        if candidato_claro is not None:
+            cuadrilatero, confianza = candidato_claro
+            resultado = _corrixir_perspectiva(
+                contido,
+                imaxe,
+                cuadrilatero / escala,
+                confianza,
+                tipo,
+                motivo="silueta_clara_da_folla",
+                max_angulo=MAX_ANGULO_INCLINACION,
+            )
+            if resultado is not None:
+                return resultado
+
         correccion = _estimar_inclinacion(bordos)
         if correccion is None:
             return _sen_cambios(contido, "deteccion_sen_confianza", dimensions)
 
-        angulo, confianza = correccion
+        angulo, confianza, puntos_linas = correccion
         if abs(angulo) < MIN_ANGULO_CORRECCION:
             return _sen_cambios(contido, "imaxe_xa_recta", dimensions)
 
@@ -117,7 +137,11 @@ def preprocesar_documento(
             or ancho_rotada * alto_rotada > MAX_PIXELES_PREPROCESAMENTO
         ):
             return _sen_cambios(contido, "saida_supera_limite_de_dimensions", dimensions)
-        rotada = _rotar_sen_recortar(imaxe, angulo)
+        rotada = _rotar_e_recortar_recheo(
+            imaxe,
+            angulo,
+            puntos_linas / escala,
+        )
         codificado = _codificar(rotada, tipo, contido)
         if codificado is None:
             return _sen_cambios(contido, "erro_de_codificacion", dimensions)
@@ -282,6 +306,147 @@ def _buscar_folla(
     return mellor
 
 
+def _buscar_folla_clara(
+    imaxe: np.ndarray,
+    gris: np.ndarray,
+    bordos: np.ndarray,
+) -> Optional[tuple[np.ndarray, float]]:
+    """Detecta unha folla clara sobre un fondo con cor ou textura.
+
+    Empréganse varios limiares próximos de saturación porque a iluminación e
+    o balance de brancos do móbil poden variar. Só se acepta un compoñente
+    central, convexo, que non toque o marco da fotografía e cuxos lados
+    coincidan maioritariamente con bordos reais da imaxe.
+    """
+
+    alto, ancho = gris.shape[:2]
+    area_imaxe = float(alto * ancho)
+    dimension = max(alto, ancho)
+    hsv = cv2.cvtColor(imaxe, cv2.COLOR_BGR2HSV)
+    saturacion = hsv[:, :, 1]
+    luminosidade = hsv[:, :, 2]
+
+    lado_peche = _impar(max(9, int(round(dimension * 0.013))))
+    lado_apertura = _impar(max(5, int(round(dimension * 0.005))))
+    kernel_peche = cv2.getStructuringElement(
+        cv2.MORPH_RECT,
+        (lado_peche, lado_peche),
+    )
+    kernel_apertura = cv2.getStructuringElement(
+        cv2.MORPH_RECT,
+        (lado_apertura, lado_apertura),
+    )
+
+    mellor: Optional[tuple[np.ndarray, float]] = None
+    mellor_confianza = 0.0
+
+    for limiar_saturacion in (8, 10, 12, 14):
+        mascara = np.where(
+            (saturacion < limiar_saturacion) & (luminosidade > 90),
+            255,
+            0,
+        ).astype(np.uint8)
+        mascara = cv2.morphologyEx(
+            mascara,
+            cv2.MORPH_CLOSE,
+            kernel_peche,
+            iterations=2,
+        )
+        mascara = cv2.morphologyEx(
+            mascara,
+            cv2.MORPH_OPEN,
+            kernel_apertura,
+            iterations=1,
+        )
+
+        contornos, _ = cv2.findContours(
+            mascara,
+            cv2.RETR_EXTERNAL,
+            cv2.CHAIN_APPROX_SIMPLE,
+        )
+        for contorno in sorted(contornos, key=cv2.contourArea, reverse=True)[:12]:
+            area = float(cv2.contourArea(contorno))
+            proporcion_area = area / area_imaxe
+            if not MIN_AREA_FOLLA_CLARA <= proporcion_area <= MAX_AREA_FOLLA_CLARA:
+                continue
+
+            envolvente = cv2.convexHull(contorno)
+            area_envolvente = float(cv2.contourArea(envolvente))
+            if area_envolvente <= 0 or area / area_envolvente < 0.92:
+                continue
+
+            perimetro = cv2.arcLength(envolvente, True)
+            aproximacion = None
+            for epsilon in (0.008, 0.01, 0.012, 0.015, 0.02, 0.025, 0.03):
+                posible = cv2.approxPolyDP(envolvente, epsilon * perimetro, True)
+                if len(posible) == 4 and cv2.isContourConvex(posible):
+                    aproximacion = posible
+                    break
+            if aproximacion is None:
+                continue
+
+            puntos = _ordenar_puntos(aproximacion.reshape(4, 2).astype(np.float32))
+            if len(np.unique(np.rint(puntos), axis=0)) != 4:
+                continue
+
+            marxe_imaxe = max(4, int(round(dimension * 0.004)))
+            if np.any(
+                (puntos[:, 0] <= marxe_imaxe)
+                | (puntos[:, 0] >= ancho - 1 - marxe_imaxe)
+                | (puntos[:, 1] <= marxe_imaxe)
+                | (puntos[:, 1] >= alto - 1 - marxe_imaxe)
+            ):
+                continue
+
+            angulos = _angulos_interiores(puntos)
+            if any(angulo < 55.0 or angulo > 125.0 for angulo in angulos):
+                continue
+
+            lados = _lonxitudes_lados(puntos)
+            if min(lados) < 0.22 * min(ancho, alto):
+                continue
+            if min(lados) / max(lados) < 0.42:
+                continue
+
+            centro = puntos.mean(axis=0)
+            distancia_centro = np.linalg.norm(
+                centro - np.array([ancho / 2.0, alto / 2.0])
+            )
+            if distancia_centro > 0.28 * np.hypot(ancho, alto):
+                continue
+
+            soportes = _soporte_de_bordo(bordos, puntos)
+            soporte = float(np.mean(soportes))
+            contraste = _contraste_do_contorno(gris, puntos)
+            if sum(valor >= 0.50 for valor in soportes) < 3:
+                continue
+            if soporte < 0.55 or contraste < 12.0:
+                continue
+
+            puntuacion_angulos = max(
+                0.0,
+                1.0 - np.mean(np.abs(np.array(angulos) - 90.0)) / 35.0,
+            )
+            confianza = (
+                0.20 * (area / area_envolvente)
+                + 0.30 * soporte
+                + 0.20 * min(1.0, contraste / 35.0)
+                + 0.15 * puntuacion_angulos
+                + 0.15 * min(1.0, proporcion_area / 0.50)
+            )
+            if confianza < 0.76:
+                continue
+            if mellor is None or confianza > mellor_confianza:
+                mellor = (puntos, float(confianza))
+                mellor_confianza = float(confianza)
+
+    return mellor
+
+
+def _impar(valor: int) -> int:
+    return valor if valor % 2 else valor + 1
+
+
 def _ordenar_puntos(puntos: np.ndarray) -> np.ndarray:
     suma = puntos.sum(axis=1)
     diferenza = np.diff(puntos, axis=1).reshape(-1)
@@ -371,6 +536,8 @@ def _corrixir_perspectiva(
     puntos: np.ndarray,
     confianza: float,
     tipo_contido: str,
+    motivo: str = "catro_bordos_detectados",
+    max_angulo: float = MAX_ANGULO_PERSPECTIVA,
 ) -> Optional[ResultadoPreprocesamento]:
     alto, ancho = imaxe.shape[:2]
     dimensions = (ancho, alto)
@@ -386,7 +553,7 @@ def _corrixir_perspectiva(
     deformacion = max(diferenza_anchos, diferenza_altos)
     if abs(inclinacion) < MIN_ANGULO_CORRECCION and deformacion < 0.035:
         return _sen_cambios(contido, "imaxe_xa_recta", dimensions)
-    if abs(inclinacion) > MAX_ANGULO_CORRECCION:
+    if abs(inclinacion) > max_angulo:
         return None
 
     centro = puntos.mean(axis=0)
@@ -436,7 +603,7 @@ def _corrixir_perspectiva(
         contido=datos_saida,
         aplicado=True,
         metodo="perspectiva",
-        motivo="catro_bordos_detectados",
+        motivo=motivo,
         angulo=round(inclinacion, 2),
         confianza=round(confianza, 3),
         dimensions_orixinais=dimensions,
@@ -445,7 +612,9 @@ def _corrixir_perspectiva(
     )
 
 
-def _estimar_inclinacion(bordos: np.ndarray) -> Optional[tuple[float, float]]:
+def _estimar_inclinacion(
+    bordos: np.ndarray,
+) -> Optional[tuple[float, float, np.ndarray]]:
     dimension = max(bordos.shape)
     linhas = cv2.HoughLinesP(
         bordos,
@@ -460,6 +629,7 @@ def _estimar_inclinacion(bordos: np.ndarray) -> Optional[tuple[float, float]]:
 
     angulos = []
     pesos = []
+    segmentos = []
     for x1, y1, x2, y2 in linhas[:, 0]:
         dx = float(x2 - x1)
         dy = float(y2 - y1)
@@ -467,9 +637,10 @@ def _estimar_inclinacion(bordos: np.ndarray) -> Optional[tuple[float, float]]:
         if lonxitude < dimension * 0.16:
             continue
         angulo = _normalizar_angulo(np.degrees(np.arctan2(dy, dx)))
-        if abs(angulo) <= MAX_ANGULO_CORRECCION:
+        if abs(angulo) <= MAX_ANGULO_INCLINACION:
             angulos.append(angulo)
             pesos.append(lonxitude)
+            segmentos.append((float(x1), float(y1), float(x2), float(y2)))
 
     if len(angulos) < 5:
         return None
@@ -488,7 +659,9 @@ def _estimar_inclinacion(bordos: np.ndarray) -> Optional[tuple[float, float]]:
         return None
 
     confianza = min(0.97, 0.45 + 0.45 * consenso + 0.10 * (1.0 - desviacion / 1.5))
-    return float(mediana), float(confianza)
+    segmentos_array = np.asarray(segmentos, dtype=float)[mascara]
+    puntos_linas = segmentos_array.reshape(-1, 2)
+    return float(mediana), float(confianza), puntos_linas
 
 
 def _normalizar_angulo(angulo: float) -> float:
@@ -508,14 +681,26 @@ def _mediana_ponderada(valores: np.ndarray, pesos: np.ndarray) -> float:
     return float(valores_ordenados[min(indice, len(valores_ordenados) - 1)])
 
 
-def _rotar_sen_recortar(imaxe: np.ndarray, angulo: float) -> np.ndarray:
+def _rotar_e_recortar_recheo(
+    imaxe: np.ndarray,
+    angulo: float,
+    puntos_linas: np.ndarray,
+) -> np.ndarray:
+    """Rota o lenzo e reduce de forma conservadora o recheo branco creado.
+
+    O recorte só se tenta en xiros amplos. Retense como mínimo o 80 % dos
+    píxeles procedentes da fotografía e garántese que as liñas que xustifican
+    a corrección queden dentro cunha marxe ampla. Non se pretende inferir o
+    bordo da folla: só reducir os triángulos artificiais da rotación.
+    """
+
     alto, ancho = imaxe.shape[:2]
     centro = (ancho / 2.0, alto / 2.0)
     matriz = cv2.getRotationMatrix2D(centro, angulo, 1.0)
     novo_ancho, novo_alto = _dimensions_rotacion(ancho, alto, angulo)
     matriz[0, 2] += novo_ancho / 2.0 - centro[0]
     matriz[1, 2] += novo_alto / 2.0 - centro[1]
-    return cv2.warpAffine(
+    rotada = cv2.warpAffine(
         imaxe,
         matriz,
         (novo_ancho, novo_alto),
@@ -523,6 +708,61 @@ def _rotar_sen_recortar(imaxe: np.ndarray, angulo: float) -> np.ndarray:
         borderMode=cv2.BORDER_CONSTANT,
         borderValue=(255, 255, 255),
     )
+    if abs(angulo) < 10.0:
+        return rotada
+
+    mascara_orixe = np.full((alto, ancho), 255, dtype=np.uint8)
+    mascara_rotada = cv2.warpAffine(
+        mascara_orixe,
+        matriz,
+        (novo_ancho, novo_alto),
+        flags=cv2.INTER_NEAREST,
+        borderMode=cv2.BORDER_CONSTANT,
+        borderValue=0,
+    )
+    valida = mascara_rotada > 0
+    total_validos = int(np.count_nonzero(valida))
+    if total_validos == 0:
+        return rotada
+
+    limiar_inicial = min(0.35, max(0.15, abs(angulo) / 75.0))
+    recorte = None
+    for limiar in np.arange(limiar_inicial, 0.09, -0.05):
+        filas = np.flatnonzero(np.mean(valida, axis=1) >= limiar)
+        columnas = np.flatnonzero(np.mean(valida, axis=0) >= limiar)
+        if len(filas) == 0 or len(columnas) == 0:
+            continue
+        x1, x2 = int(columnas[0]), int(columnas[-1] + 1)
+        y1, y2 = int(filas[0]), int(filas[-1] + 1)
+        retidos = int(np.count_nonzero(valida[y1:y2, x1:x2])) / total_validos
+        if retidos >= 0.80:
+            recorte = [x1, y1, x2, y2]
+            break
+    if recorte is None:
+        return rotada
+
+    x1, y1, x2, y2 = recorte
+    transformados = cv2.transform(
+        puntos_linas.astype(np.float32).reshape(-1, 1, 2),
+        matriz,
+    ).reshape(-1, 2)
+    marxe_contido = max(40, int(round(min(ancho, alto) * 0.12)))
+    x1 = min(x1, max(0, int(np.floor(transformados[:, 0].min())) - marxe_contido))
+    y1 = min(y1, max(0, int(np.floor(transformados[:, 1].min())) - marxe_contido))
+    x2 = max(
+        x2,
+        min(novo_ancho, int(np.ceil(transformados[:, 0].max())) + marxe_contido),
+    )
+    y2 = max(
+        y2,
+        min(novo_alto, int(np.ceil(transformados[:, 1].max())) + marxe_contido),
+    )
+
+    if x2 - x1 < 0.72 * ancho or y2 - y1 < 0.72 * alto:
+        return rotada
+    if (x2 - x1) * (y2 - y1) > 0.96 * novo_ancho * novo_alto:
+        return rotada
+    return rotada[y1:y2, x1:x2]
 
 
 def _dimensions_rotacion(ancho: int, alto: int, angulo: float) -> tuple[int, int]:
@@ -540,23 +780,31 @@ def _codificar(
     contido_orixinal: bytes,
 ) -> Optional[tuple[bytes, str]]:
     e_png = tipo_contido == "image/png" or contido_orixinal.startswith(b"\x89PNG\r\n\x1a\n")
+    limite = _limite_bytes_saida()
     if e_png:
-        correcto, datos = cv2.imencode(".png", imaxe, [cv2.IMWRITE_PNG_COMPRESSION, 3])
-        formato = "png"
-    else:
-        parametros = [cv2.IMWRITE_JPEG_QUALITY, 97]
-        if hasattr(cv2, "IMWRITE_JPEG_SAMPLING_FACTOR_444"):
-            parametros.extend(
-                [
-                    cv2.IMWRITE_JPEG_SAMPLING_FACTOR,
-                    cv2.IMWRITE_JPEG_SAMPLING_FACTOR_444,
-                ]
+        for compresion in (3, 6, 9):
+            correcto, datos = cv2.imencode(
+                ".png",
+                imaxe,
+                [cv2.IMWRITE_PNG_COMPRESSION, compresion],
             )
-        correcto, datos = cv2.imencode(".jpg", imaxe, parametros)
-        formato = "jpg"
-    if not correcto:
+            if correcto and len(datos) <= limite:
+                return datos.tobytes(), "png"
         return None
-    resultado = datos.tobytes()
-    if len(resultado) > _limite_bytes_saida():
+    else:
+        # Selecciónase sempre a maior calidade que caiba no límite. A maioría
+        # dos recortes entran a 97; a redución gradual só se emprega cando a
+        # rotación do lenzo completo aumenta o tamaño do JPEG.
+        for calidade in (97, 96, 95, 94, 93, 92):
+            parametros = [cv2.IMWRITE_JPEG_QUALITY, calidade]
+            if hasattr(cv2, "IMWRITE_JPEG_SAMPLING_FACTOR_444"):
+                parametros.extend(
+                    [
+                        cv2.IMWRITE_JPEG_SAMPLING_FACTOR,
+                        cv2.IMWRITE_JPEG_SAMPLING_FACTOR_444,
+                    ]
+                )
+            correcto, datos = cv2.imencode(".jpg", imaxe, parametros)
+            if correcto and len(datos) <= limite:
+                return datos.tobytes(), "jpg"
         return None
-    return resultado, formato
