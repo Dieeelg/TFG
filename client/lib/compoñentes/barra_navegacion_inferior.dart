@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart'; // Barra de navegación principal.
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../views/calendario.dart';
-import '../views/camara/captura_informe.dart';
 import '../views/progreso.dart';
 
 class AppBottomNav extends StatefulWidget {
@@ -42,7 +41,7 @@ class _AppBottomNavState extends State<AppBottomNav> {
         } else if (destino == 1) {
           Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ProgressScreen()));
         } else if (destino == 2) {
-          await Navigator.push(context, MaterialPageRoute(builder: (_) => const CapturaInformeScreen()));
+          await Navigator.pushNamed(context, '/captura');
         } else if (destino == 3) {
           Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const TreatmentCalendarScreen()));
         }

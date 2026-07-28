@@ -88,8 +88,7 @@ class _AxustesPacienteScreenState extends State<AxustesPacienteScreen> {
     }
     await _storage.write(key: 'hora_toma', value: hora);
     await _storage.write(key: 'modo_sinxelo', value: _modoSinxelo ? 'true' : 'false');
-    await LocalNotificationService().programarTomas(
-      identificador: 'paciente_local',
+    await LocalNotificationService().programarTomasPaciente(
       nome: nome,
       hora: hora,
     );

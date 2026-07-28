@@ -51,8 +51,7 @@ class _AdditionalSettingsScreenState extends State<AdditionalSettingsScreen> {
     );
     await _storage.write(key: 'configuracion_finalizada', value: 'true');
     final horaTexto = '${_hora.hour.toString().padLeft(2, '0')}:${_hora.minute.toString().padLeft(2, '0')}';
-    await LocalNotificationService().programarTomas(
-      identificador: 'paciente_local',
+    await LocalNotificationService().programarTomasPaciente(
       nome: nome,
       hora: horaTexto,
     );
