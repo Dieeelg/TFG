@@ -2,7 +2,6 @@ import 'package:flutter/material.dart'; // Vinculación desde o paciente.
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../modelos_vista/autenticacion/vinculacion_paciente.dart';
-import 'configuracion_escaneo.dart';
 
 class VinculacionScreen extends StatefulWidget {
   const VinculacionScreen({super.key});
@@ -43,7 +42,7 @@ class _VinculacionScreenState extends State<VinculacionScreen> {
                   ),
                   const SizedBox(height: 12),
                   const Text(
-                    'Amosa este código á persoa que te vai acompañar no teu seguimento.',
+                    'Amosa este código á persoa que te vai acompañar no teu seguimento. Ao vinculala, poderá consultar o tratamento e engadir novas follas no teu nome.',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 18, color: Color(0xFF34495E)),
                   ),
@@ -62,10 +61,15 @@ class _VinculacionScreenState extends State<VinculacionScreen> {
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: const [
-                          BoxShadow(color: Colors.black12, blurRadius: 15, offset: Offset(0, 5))
+                          BoxShadow(
+                            color: Colors.black12,
+                            blurRadius: 15,
+                            offset: Offset(0, 5),
+                          ),
                         ],
                       ),
-                      child: QrImageView( //Xeramos o QR
+                      child: QrImageView(
+                        //Xeramos o QR
                         data: vm.datosQR!,
                         version: QrVersions.auto,
                         size: 250.0,
@@ -86,44 +90,51 @@ class _VinculacionScreenState extends State<VinculacionScreen> {
                     child: ElevatedButton(
                       onPressed: vm.tenCoidador
                           ? () {
-                        // Se hai coidador imos á pantalla de decidir quen escanea
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const SetupEscanearScreen()),
-                        );
-                      }
+                              Navigator.pushReplacementNamed(
+                                context,
+                                '/configuracion_adicional',
+                              );
+                            }
                           : null,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue,
                         foregroundColor: Colors.white,
                         disabledBackgroundColor: Colors.grey.shade300,
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         elevation: vm.tenCoidador ? 4 : 0,
                       ),
                       child: vm.tenCoidador
                           ? const Text(
-                        'Continuar á App',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                      )
+                              'Continuar á App',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            )
                           : Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.grey.shade500,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.grey.shade500,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  'Agardando polo coidador...',
+                                  style: TextStyle(
+                                    color: Colors.grey.shade600,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            'Agardando polo coidador...',
-                            style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
-                          ),
-                        ],
-                      ),
                     ),
                   ),
 
@@ -131,7 +142,7 @@ class _VinculacionScreenState extends State<VinculacionScreen> {
 
                   // --- BOTÓN PARA SALTAR ---
                   // Só o mostramos se aínda non se vinculou ninguén
-                  if (!vm.tenCoidador) _buildBotonSaltar(context, vm),
+                  if (!vm.tenCoidador) _buildBotonSaltar(context),
 
                   const SizedBox(height: 10),
 
@@ -141,7 +152,10 @@ class _VinculacionScreenState extends State<VinculacionScreen> {
                       onPressed: () => vm.comprobarEstadoVinculacion(),
                       child: Text(
                         "Xa me escaneou? Preme aquí",
-                        style: TextStyle(color: Colors.blue.shade700, fontSize: 14),
+                        style: TextStyle(
+                          color: Colors.blue.shade700,
+                          fontSize: 14,
+                        ),
                       ),
                     ),
 
@@ -170,7 +184,11 @@ class _VinculacionScreenState extends State<VinculacionScreen> {
           Expanded(
             child: Text(
               'Enviaranse notificacións sobre as túas tomas ademais dun resumo dos teus datos.',
-              style: TextStyle(color: Color(0xFF856404), fontSize: 14, fontWeight: FontWeight.w500),
+              style: TextStyle(
+                color: Color(0xFF856404),
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ],
@@ -178,24 +196,17 @@ class _VinculacionScreenState extends State<VinculacionScreen> {
     );
   }
 
-  /// Botón de saltar: Gardamos que o paciente escanea el mesmo e imos á Home directamente
-  Widget _buildBotonSaltar(BuildContext context, VinculacionPacienteViewModel vm) {
+  Widget _buildBotonSaltar(BuildContext context) {
     return TextButton(
-      onPressed: () async {
-        //Gardamos que o paciente escanea el mesmo por defecto
-        await vm.configurarEscaneoAutomaticoPaciente();
-
-        if (context.mounted) {
-          debugPrint("Saltando directo á Home");
-          Navigator.pushReplacementNamed(context, '/configuracion_adicional');
-        }
+      onPressed: () {
+        Navigator.pushReplacementNamed(context, '/configuracion_adicional');
       },
       child: const Text(
         'Saltar vinculación',
         style: TextStyle(
-            color: Color(0xFF333333),
-            fontSize: 16,
-            decoration: TextDecoration.underline
+          color: Color(0xFF333333),
+          fontSize: 16,
+          decoration: TextDecoration.underline,
         ),
       ),
     );

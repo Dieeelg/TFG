@@ -20,9 +20,9 @@ class PacienteHomeScreen extends StatefulWidget {
   State<PacienteHomeScreen> createState() => _PacienteHomeScreenState();
 }
 
-class _PacienteHomeScreenState extends State<PacienteHomeScreen> with WidgetsBindingObserver {
+class _PacienteHomeScreenState extends State<PacienteHomeScreen>
+    with WidgetsBindingObserver {
   bool _preferenciaCargada = false;
-  bool _escaneaPaciente = false;
   bool _modoSinxelo = false;
   String? _nomeUsuario;
   String _horaToma = '20:00';
@@ -36,27 +36,25 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen> with WidgetsBin
     _programarPecheDoDia();
     _syncSubscription = P2PSyncService().actualizacions.listen((evento) {
       if (evento == 'paciente_local' && mounted) {
-        _cargarPreferenciaEscaneo();
+        _cargarPreferencias();
         context.read<HomeViewModel>().cargarDatosHome();
       }
     });
-    _cargarPreferenciaEscaneo();
+    _cargarPreferencias();
     // Cargamos os datos da BD ao entrar
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<HomeViewModel>().cargarDatosHome();
     });
   }
 
-  Future<void> _cargarPreferenciaEscaneo() async {
+  Future<void> _cargarPreferencias() async {
     const storage = FlutterSecureStorage();
-    final preferencia = await storage.read(key: 'quen_escanea');
     final nome = await storage.read(key: 'nome_usuario');
     final hora = await storage.read(key: 'hora_toma');
     final modoSinxelo = await storage.read(key: 'modo_sinxelo') == 'true';
 
     if (!mounted) return;
     setState(() {
-      _escaneaPaciente = preferencia == 'PACIENTE';
       _nomeUsuario = nome?.trim().isEmpty == true ? null : nome?.trim();
       _horaToma = hora ?? '20:00';
       _modoSinxelo = modoSinxelo;
@@ -72,46 +70,52 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen> with WidgetsBin
       backgroundColor: const Color(0xFFF8F9FA),
       body: SafeArea(
         child: vm.cargando || !_preferenciaCargada
-            ? const Center(child: CircularProgressIndicator()) // Indicador de carga
-            : RefreshIndicator( // Para poder refrescar arrastrando cara abaixo
-          onRefresh: () => vm.cargarDatosHome(),
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(),
-                const SizedBox(height: 20),
-                if (vm.pautaSemanal.isEmpty)
-                  _buildEmptyState(context)
-                else if (_modoSinxelo) ...[
-                  if (vm.tomaHoxe == null)
-                    _buildNoPendingState()
-                  else if (vm.tomaHoxe!.eControl)
-                    _buildControlState(vm)
-                  else
-                    _buildCardProximaToma(context, vm),
-                ]
-                else ...[
-                  if (vm.tomaHoxe == null)
-                    _buildNoPendingState()
-                  else if (vm.tomaHoxe!.eControl)
-                    _buildControlState(vm)
-                  else
-                    _buildCardProximaToma(context, vm),
-                  const SizedBox(height: 20),
-                  if (vm.tomaHoxe != null && vm.tomaHoxe?.eControl != true) ...[
-                    _buildCardProximoControl(),
-                    const SizedBox(height: 20),
-                  ],
-                  _buildPautaSemanal(vm),
-                ],
-                const SizedBox(height: 20),
-              ],
-            ),
-          ),
-        ),
+            ? const Center(
+                child: CircularProgressIndicator(),
+              ) // Indicador de carga
+            : RefreshIndicator(
+                // Para poder refrescar arrastrando cara abaixo
+                onRefresh: () => vm.cargarDatosHome(),
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 10,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildHeader(),
+                      const SizedBox(height: 20),
+                      if (vm.pautaSemanal.isEmpty)
+                        _buildEmptyState(context)
+                      else if (_modoSinxelo) ...[
+                        if (vm.tomaHoxe == null)
+                          _buildNoPendingState()
+                        else if (vm.tomaHoxe!.eControl)
+                          _buildControlState(vm)
+                        else
+                          _buildCardProximaToma(context, vm),
+                      ] else ...[
+                        if (vm.tomaHoxe == null)
+                          _buildNoPendingState()
+                        else if (vm.tomaHoxe!.eControl)
+                          _buildControlState(vm)
+                        else
+                          _buildCardProximaToma(context, vm),
+                        const SizedBox(height: 20),
+                        if (vm.tomaHoxe != null &&
+                            vm.tomaHoxe?.eControl != true) ...[
+                          _buildCardProximoControl(),
+                          const SizedBox(height: 20),
+                        ],
+                        _buildPautaSemanal(vm),
+                      ],
+                      const SizedBox(height: 20),
+                    ],
+                  ),
+                ),
+              ),
       ),
       bottomNavigationBar: _modoSinxelo ? null : _buildBottomBar(context),
     );
@@ -137,31 +141,29 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen> with WidgetsBin
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 17, height: 1.35, color: Colors.black54),
           ),
-          if (_escaneaPaciente) ...[
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () async {
-                final cambiou = await Navigator.push<bool>(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const CapturaInformeScreen(),
-                  ),
-                );
-                if (cambiou == true && context.mounted) {
-                  await context.read<HomeViewModel>().cargarDatosHome();
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF333333),
-                foregroundColor: Colors.white,
-                minimumSize: const Size(double.infinity, 56),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: () async {
+              final cambiou = await Navigator.push<bool>(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const CapturaInformeScreen(),
                 ),
+              );
+              if (cambiou == true && context.mounted) {
+                await context.read<HomeViewModel>().cargarDatosHome();
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF333333),
+              foregroundColor: Colors.white,
+              minimumSize: const Size(double.infinity, 56),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
               ),
-              child: const Text('Escanear', style: TextStyle(fontSize: 18)),
             ),
-          ],
+            child: const Text('Escanear', style: TextStyle(fontSize: 18)),
+          ),
         ],
       ),
     );
@@ -193,10 +195,12 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen> with WidgetsBin
               onPressed: () async {
                 final cambiou = await Navigator.push<bool>(
                   context,
-                  MaterialPageRoute(builder: (_) => const AxustesPacienteScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const AxustesPacienteScreen(),
+                  ),
                 );
                 if (cambiou == true) {
-                  await _cargarPreferenciaEscaneo();
+                  await _cargarPreferencias();
                   if (mounted) context.read<HomeViewModel>().cargarDatosHome();
                 }
               },
@@ -210,9 +214,11 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen> with WidgetsBin
 
   Widget _buildCardProximaToma(BuildContext context, HomeViewModel vm) {
     final toma = vm.tomaHoxe;
-    final tomada = toma?.estado == 'TOMADA' || toma?.estado == 'TOMADA_FORA_HORA';
+    final tomada =
+        toma?.estado == 'TOMADA' || toma?.estado == 'TOMADA_FORA_HORA';
     final hoxe = DateTime.now().toIso8601String().substring(0, 10);
-    final podeConfirmar = toma != null &&
+    final podeConfirmar =
+        toma != null &&
         toma.data == hoxe &&
         !toma.eControl &&
         toma.dose != 'NON' &&
@@ -223,7 +229,9 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen> with WidgetsBin
       decoration: _cardDecoration(
         color: toma?.estado == 'TOMADA_FORA_HORA'
             ? const Color(0xFFFFE0A6)
-            : tomada ? const Color(0xFFB8E5E1) : Colors.white,
+            : tomada
+            ? const Color(0xFFB8E5E1)
+            : Colors.white,
       ),
       child: Column(
         children: [
@@ -232,7 +240,9 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen> with WidgetsBin
             child: Text(
               toma?.estado == 'TOMADA_FORA_HORA'
                   ? 'Toma completada fóra de hora'
-                  : tomada ? 'Toma completada' : _tituloToma(toma),
+                  : tomada
+                  ? 'Toma completada'
+                  : _tituloToma(toma),
               style: TextStyle(
                 color: tomada ? const Color(0xFF268F5A) : Colors.blueGrey,
                 fontSize: 17,
@@ -292,15 +302,23 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen> with WidgetsBin
           if (!tomada) ...[
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: podeConfirmar ? () => _pedirConfirmacionToma(vm) : null,
+              onPressed: podeConfirmar
+                  ? () => _pedirConfirmacionToma(vm)
+                  : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF333333),
                 minimumSize: const Size(double.infinity, 56),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               child: const Text(
                 "Confirmar toma",
-                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ],
@@ -317,10 +335,15 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen> with WidgetsBin
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Pauta semanal", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+          const Text(
+            "Pauta semanal",
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+          ),
           const SizedBox(height: 18),
           vm.pautaSemanal.isEmpty
-              ? const Text("Non hai pautas rexistradas. Saca unha foto ao teu informe.")
+              ? const Text(
+                  "Non hai pautas rexistradas. Saca unha foto ao teu informe.",
+                )
               : SizedBox(
                   width: double.infinity,
                   child: Wrap(
@@ -333,13 +356,13 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen> with WidgetsBin
                         .map((toma) => _buildDoseCircle(toma))
                         .toList(),
                   ),
-                )
+                ),
         ],
       ),
     );
   }
 
-// --- TARXETA PRÓXIMO CONTROL (Axustada) ---
+  // --- TARXETA PRÓXIMO CONTROL (Axustada) ---
   Widget _buildCardProximoControl() {
     final cabeceira = context.watch<HomeViewModel>().cabeceira;
     return Container(
@@ -351,7 +374,11 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen> with WidgetsBin
         children: [
           const Text(
             "Próximo control",
-            style: TextStyle(color: Colors.blueGrey, fontSize: 17, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              color: Colors.blueGrey,
+              fontSize: 17,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 10),
           // Usamos Row con Expanded para que o texto flúa ben
@@ -365,11 +392,18 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen> with WidgetsBin
                   children: [
                     Text(
                       cabeceira?.proximaVisita ?? 'Data non dispoñible',
-                      style: const TextStyle(fontSize: 21, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        fontSize: 21,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     Text(
                       cabeceira?.centro ?? 'Centro non identificado',
-                      style: TextStyle(color: Colors.blue[700], fontSize: 17, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        color: Colors.blue[700],
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 ),
@@ -381,7 +415,10 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen> with WidgetsBin
             ElevatedButton.icon(
               onPressed: () => _chamarAoCentro(cabeceira!.centro!),
               icon: const Icon(Icons.phone, size: 22),
-              label: const Text('Chamar ao centro', style: TextStyle(fontSize: 17)),
+              label: const Text(
+                'Chamar ao centro',
+                style: TextStyle(fontSize: 17),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF333333),
                 foregroundColor: Colors.white,
@@ -417,11 +454,18 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen> with WidgetsBin
           radius: 30,
           child: Text(
             toma.dose,
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black),
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
           ),
         ),
         const SizedBox(height: 6),
-        Text(toma.dia, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+        Text(
+          toma.dia,
+          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+        ),
       ],
     );
   }
@@ -430,16 +474,19 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen> with WidgetsBin
     _pecheDiaTimer?.cancel();
     final agora = DateTime.now();
     final medianoite = DateTime(agora.year, agora.month, agora.day + 1);
-    _pecheDiaTimer = Timer(medianoite.difference(agora) + const Duration(seconds: 1), () {
-      if (mounted) context.read<HomeViewModel>().cargarDatosHome();
-      _programarPecheDoDia();
-    });
+    _pecheDiaTimer = Timer(
+      medianoite.difference(agora) + const Duration(seconds: 1),
+      () {
+        if (mounted) context.read<HomeViewModel>().cargarDatosHome();
+        _programarPecheDoDia();
+      },
+    );
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      _cargarPreferenciaEscaneo();
+      _cargarPreferencias();
       context.read<HomeViewModel>().cargarDatosHome();
     }
   }
@@ -491,14 +538,25 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen> with WidgetsBin
           Container(
             width: 76,
             height: 76,
-            decoration: const BoxDecoration(color: Colors.blue, shape: BoxShape.circle),
-            child: const Icon(Icons.calendar_month, color: Colors.white, size: 42),
+            decoration: const BoxDecoration(
+              color: Colors.blue,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.calendar_month,
+              color: Colors.white,
+              size: 42,
+            ),
           ),
           const SizedBox(height: 16),
           Text(
             eHoxe ? 'O control é hoxe' : 'Próximo control',
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF075A9C)),
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF075A9C),
+            ),
           ),
           const SizedBox(height: 8),
           Text(
@@ -510,13 +568,20 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen> with WidgetsBin
             Text(
               cabeceira!.centro!,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.blue),
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.blue,
+              ),
             ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
               onPressed: () => _chamarAoCentro(cabeceira.centro!),
               icon: const Icon(Icons.phone),
-              label: const Text('Chamar ao centro', style: TextStyle(fontSize: 17)),
+              label: const Text(
+                'Chamar ao centro',
+                style: TextStyle(fontSize: 17),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF333333),
                 foregroundColor: Colors.white,
@@ -671,7 +736,9 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen> with WidgetsBin
       final info = await ApiService().buscarCentro(centro);
       final telefono = info['telefono'] as String?;
       if (telefono == null || telefono.trim().isEmpty) {
-        throw Exception('O catálogo da Xunta non contén un teléfono para este centro');
+        throw Exception(
+          'O catálogo da Xunta non contén un teléfono para este centro',
+        );
       }
       final uri = Uri(scheme: 'tel', path: telefono);
       if (!await launchUrl(uri)) {
@@ -692,32 +759,37 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen> with WidgetsBin
       borderRadius: BorderRadius.circular(20),
       boxShadow: [
         BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 5)
+          color: Colors.black.withValues(alpha: 0.05),
+          blurRadius: 10,
+          offset: const Offset(0, 5),
         ),
       ],
     );
   }
+
   Widget _buildBottomBar(BuildContext context) {
     return BottomNavigationBar(
       onTap: (index) {
-        final destino = _escaneaPaciente ? index : (index == 2 ? 3 : index);
-        if (destino == 1) {
+        if (index == 1) {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const ProgressScreen()),
           );
         }
-        if (destino == 2) { // Botón da cámara
+        if (index == 2) {
+          // Botón da cámara
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const CapturaInformeScreen()),
+            MaterialPageRoute(
+              builder: (context) => const CapturaInformeScreen(),
+            ),
           ).then((_) {
-            if (context.mounted) context.read<HomeViewModel>().cargarDatosHome();
+            if (context.mounted) {
+              context.read<HomeViewModel>().cargarDatosHome();
+            }
           });
         }
-        if (destino == 3) {
+        if (index == 3) {
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -736,9 +808,11 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen> with WidgetsBin
       items: [
         const BottomNavigationBarItem(icon: Icon(Icons.home), label: ""),
         const BottomNavigationBarItem(icon: Icon(Icons.trending_up), label: ""),
-        if (_escaneaPaciente)
-          const BottomNavigationBarItem(icon: Icon(Icons.camera_alt), label: ""),
-        const BottomNavigationBarItem(icon: Icon(Icons.calendar_month), label: ""),
+        const BottomNavigationBarItem(icon: Icon(Icons.camera_alt), label: ""),
+        const BottomNavigationBarItem(
+          icon: Icon(Icons.calendar_month),
+          label: "",
+        ),
       ],
     );
   }
