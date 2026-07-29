@@ -22,6 +22,8 @@ class _AxustesPacienteScreenState extends State<AxustesPacienteScreen> {
   bool _modoSinxelo = false;
   bool _cargando = true;
   bool _gardando = false;
+  String? _desvinculandoId;
+  List<VinculacionP2P> _supervisores = [];
 
   @override
   void initState() {
@@ -33,6 +35,7 @@ class _AxustesPacienteScreenState extends State<AxustesPacienteScreen> {
     final nome = await _storage.read(key: 'nome_usuario') ?? '';
     final hora = await _storage.read(key: 'hora_toma') ?? '20:00';
     final modoSinxelo = await _storage.read(key: 'modo_sinxelo') == 'true';
+    final supervisores = await _cifrado.obterPorRolRemoto('COIDADOR');
     final partes = hora.split(':');
     if (!mounted) return;
     setState(() {
@@ -44,8 +47,50 @@ class _AxustesPacienteScreenState extends State<AxustesPacienteScreen> {
         );
       }
       _modoSinxelo = modoSinxelo;
+      _supervisores = supervisores;
       _cargando = false;
     });
+  }
+
+  Future<void> _desvincularSupervisor(
+    VinculacionP2P vinculacion,
+    int indice,
+  ) async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Quitar persoa supervisora?'),
+        content: Text(
+          'A persoa supervisora ${indice + 1} deixará de consultar o teu tratamento, recibir avisos e engadir follas no teu nome.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Quitar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmar != true || !mounted) return;
+    setState(() => _desvinculandoId = vinculacion.id);
+    try {
+      await P2PSyncService().desvincularCoidador(vinculacion);
+      final supervisores = await _cifrado.obterPorRolRemoto('COIDADOR');
+      if (!mounted) return;
+      setState(() => _supervisores = supervisores);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) setState(() => _desvinculandoId = null);
+    }
   }
 
   Future<void> _cambiarModo(bool activar) async {
@@ -260,6 +305,58 @@ class _AxustesPacienteScreenState extends State<AxustesPacienteScreen> {
                   onTap: _mostrarQr,
                 ),
               ),
+              const SizedBox(height: 14),
+              const Text(
+                'Persoas supervisoras vinculadas',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              if (_supervisores.isEmpty)
+                const Card(
+                  child: Padding(
+                    padding: EdgeInsets.all(20),
+                    child: Text(
+                      'Non hai persoas supervisoras vinculadas.',
+                      style: TextStyle(fontSize: 17),
+                    ),
+                  ),
+                ),
+              for (var i = 0; i < _supervisores.length; i++)
+                Card(
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 8,
+                    ),
+                    leading: const CircleAvatar(
+                      child: Icon(Icons.supervisor_account_outlined),
+                    ),
+                    title: Text(
+                      'Persoa supervisora ${i + 1}',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    subtitle: const Text('Pode consultar e actualizar a pauta'),
+                    trailing: _desvinculandoId == _supervisores[i].id
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : IconButton(
+                            tooltip: 'Quitar persoa supervisora',
+                            onPressed: () =>
+                                _desvincularSupervisor(_supervisores[i], i),
+                            icon: const Icon(
+                              Icons.person_remove_outlined,
+                              color: Colors.red,
+                              size: 30,
+                            ),
+                          ),
+                  ),
+                ),
               const SizedBox(height: 24),
               FilledButton.icon(
                 onPressed: _gardando ? null : _gardar,

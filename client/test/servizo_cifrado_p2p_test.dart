@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:tfg_sintrom/servizos/servizo_cifrado_p2p.dart';
 
 void main() {
@@ -11,6 +12,7 @@ void main() {
   late VinculacionP2P vinculacion;
 
   setUp(() {
+    FlutterSecureStorage.setMockInitialValues({});
     servizo = ServizoCifradoP2P();
     vinculacion = VinculacionP2P(
       id: vinculacionId,
@@ -119,5 +121,25 @@ void main() {
     expect(datos.uidPaciente, 'uid-paciente');
     expect(datos.tokenPaciente, 'token-paciente');
     expect(datos.claveBase64, clave);
+  });
+
+  test('elimina só a vinculación seleccionada', () async {
+    final outraVinculacion = VinculacionP2P(
+      id: 'segunda-vinculacion',
+      uidRemoto: 'outro-uid',
+      tokenRemoto: 'outro-token',
+      claveBase64: outraClave,
+      rolRemoto: 'COIDADOR',
+    );
+    await servizo.gardarVinculacion(vinculacion);
+    await servizo.gardarVinculacion(outraVinculacion);
+
+    await servizo.eliminarPorId(vinculacion.id);
+
+    expect(await servizo.obterPorId(vinculacion.id), isNull);
+    expect(
+      (await servizo.obterPorId(outraVinculacion.id))?.tokenRemoto,
+      outraVinculacion.tokenRemoto,
+    );
   });
 }
