@@ -68,22 +68,27 @@ class P2PSyncService {
       return;
     }
     if (tipo == 'DESVINCULAR_COIDADOR') {
-      final datos = _jsonOuNull(payloadRaw);
-      final token = datos?['tokenCoidador'] as String?;
-      final tokens = await _tokensCoidadores();
-      if (token == null) {
-        tokens.clear();
-      } else {
-        tokens.remove(token);
-      }
-      await _storage.write(key: 'tokens_coidadores', value: jsonEncode(tokens));
-      if (tokens.isEmpty) {
-        await _storage.delete(key: 'token_coidador');
-      } else {
-        await _storage.write(key: 'token_coidador', value: tokens.first);
-      }
+      final vinculacion = await _cifrado.obterPorId(vinculacionId);
+      if (vinculacion == null || vinculacion.rolRemoto != 'COIDADOR') return;
+      await _retirarTokenCoidador(vinculacion.tokenRemoto);
       await _cifrado.eliminarPorId(vinculacionId);
       _actualizacions.add('paciente_local');
+      return;
+    }
+    if (tipo == 'DESVINCULAR_PACIENTE') {
+      final vinculacion = await _cifrado.obterPorId(vinculacionId);
+      final datos = _jsonOuNull(payloadRaw);
+      final uidPaciente = datos?['pacienteUid'] as String?;
+      if (vinculacion == null ||
+          vinculacion.rolRemoto != 'PACIENTE' ||
+          uidPaciente == null ||
+          uidPaciente != vinculacion.uidRemoto) {
+        return;
+      }
+      await _db.eliminarPacienteCoidador(uidPaciente);
+      await LocalNotificationService().cancelarTomas('coidador_$uidPaciente');
+      await _cifrado.eliminarPorId(vinculacionId);
+      _actualizacions.add('coidador:$uidPaciente');
       return;
     }
     final payload = _jsonOuNull(payloadRaw);
@@ -288,6 +293,17 @@ class P2PSyncService {
     return tokens;
   }
 
+  Future<void> _retirarTokenCoidador(String token) async {
+    final tokens = await _tokensCoidadores();
+    tokens.remove(token);
+    await _storage.write(key: 'tokens_coidadores', value: jsonEncode(tokens));
+    if (tokens.isEmpty) {
+      await _storage.delete(key: 'token_coidador');
+    } else {
+      await _storage.write(key: 'token_coidador', value: tokens.first);
+    }
+  }
+
   Future<void> solicitarSincronizacion() async {
     final pacientes = await _db.obterPacientesCoidador();
     final meuToken = await FirebaseMessaging.instance.getToken();
@@ -331,6 +347,29 @@ class P2PSyncService {
     await _db.eliminarPacienteCoidador(uid);
     await LocalNotificationService().cancelarTomas('coidador_$uid');
     _actualizacions.add('coidador:$uid');
+  }
+
+  Future<void> desvincularCoidador(VinculacionP2P vinculacion) async {
+    if (vinculacion.rolRemoto != 'COIDADOR') {
+      throw Exception(
+        'A vinculación seleccionada non pertence a un supervisor',
+      );
+    }
+    final uidPaciente = FirebaseAuth.instance.currentUser?.uid;
+    if (uidPaciente == null || uidPaciente.isEmpty) {
+      throw Exception('Non se puido identificar este dispositivo paciente');
+    }
+    final enviada = await _enviarCifrado(
+      vinculacion: vinculacion,
+      payload: jsonEncode({'pacienteUid': uidPaciente}),
+      tipoAviso: 'DESVINCULAR_PACIENTE',
+    );
+    if (!enviada) {
+      throw Exception('Non se puido avisar ao supervisor da desvinculación');
+    }
+    await _retirarTokenCoidador(vinculacion.tokenRemoto);
+    await _cifrado.eliminarPorId(vinculacion.id);
+    _actualizacions.add('paciente_local');
   }
 
   Future<void> enviarConfiguracionPaciente({
