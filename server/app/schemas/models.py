@@ -47,7 +47,7 @@ class ErrorResponse(BaseModel):
 
 class NotificacionP2P(BaseModel):
     token_destino: str = Field(...,description="Token FMC do destino")
-    payload: str = Field(...,description="Datos a enviar polo móbil de orixen cifrados ")
+    payload: str = Field(..., description="Envelope AES-GCM cifrado polo móbil de orixe")
     tipo_aviso: str = Field(...,description="Tipo de mensaxe a enviar")
 
 class NotificacionResponse(BaseModel):
