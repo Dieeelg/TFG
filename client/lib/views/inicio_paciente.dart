@@ -317,7 +317,7 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen> with WidgetsBin
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Pauta semanal", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+          const Text("Pauta", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
           const SizedBox(height: 18),
           vm.pautaSemanal.isEmpty
               ? const Text("Non hai pautas rexistradas. Saca unha foto ao teu informe.")
@@ -714,7 +714,9 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen> with WidgetsBin
             context,
             MaterialPageRoute(builder: (context) => const CapturaInformeScreen()),
           ).then((_) {
-            if (context.mounted) context.read<HomeViewModel>().cargarDatosHome();
+            if (context.mounted) {
+              context.read<HomeViewModel>().cargarDatosHome();
+            }
           });
         }
         if (destino == 3) {

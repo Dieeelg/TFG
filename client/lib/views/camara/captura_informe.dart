@@ -5,6 +5,9 @@ import 'package:image_picker/image_picker.dart';
 import '../../servizos/servizo_api.dart';
 import '../../servizos/servizo_base_datos.dart';
 import '../../servizos/servizo_sincronizacion_p2p.dart';
+import '../../servizos/servizo_notificacions_locais.dart';
+import '../../compoñentes/barra_navegacion_inferior.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class CapturaInformeScreen extends StatefulWidget {
   final String? tokenPacienteDestino;
@@ -49,6 +52,14 @@ class _CapturaInformeScreenState extends State<CapturaInformeScreen> {
       final analise = await _api.enviarInforme(ficheiro);
       if (widget.tokenPacienteDestino == null) {
         await DatabaseService().gardarAnalise(analise);
+        const storage = FlutterSecureStorage();
+        final hora = await storage.read(key: 'hora_toma');
+        if (hora != null) {
+          await LocalNotificationService().programarTomasPaciente(
+            nome: await storage.read(key: 'nome_usuario') ?? '',
+            hora: hora,
+          );
+        }
         await P2PSyncService().notificarCoidador('NOVO_INFORME');
       } else {
         await P2PSyncService().enviarInformeRemoto(
@@ -87,6 +98,7 @@ class _CapturaInformeScreenState extends State<CapturaInformeScreen> {
   Widget build(BuildContext context) => Scaffold(
         backgroundColor: const Color(0xFFF8F9FA),
         appBar: AppBar(
+          automaticallyImplyLeading: widget.tokenPacienteDestino != null,
           backgroundColor: const Color(0xFFF8F9FA),
           title: const Text(
             'Engadir un informe',
@@ -188,6 +200,9 @@ class _CapturaInformeScreenState extends State<CapturaInformeScreen> {
             ],
           ),
         ),
+        bottomNavigationBar: widget.tokenPacienteDestino == null
+            ? const AppBottomNav(currentIndex: 2)
+            : null,
       );
 
   Widget _opcion({

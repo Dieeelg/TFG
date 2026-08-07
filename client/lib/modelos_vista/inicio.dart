@@ -26,7 +26,9 @@ class HomeViewModel extends ChangeNotifier {
   List<PautaToma> pautaSemanal = [];
 
   String get doseHoxe {
-    if (_ultimaAnalise == null || _ultimaAnalise!.calendario.isEmpty) return "--";
+    if (_ultimaAnalise == null || _ultimaAnalise!.calendario.isEmpty) {
+      return "--";
+    }
     return tomaHoxe?.dose ?? "--";
   }
 
@@ -35,7 +37,8 @@ class HomeViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await DatabaseService().pecharTomasVencidas();
+      final novasTomasEsquecidas =
+          await DatabaseService().pecharTomasVencidas();
       final pautaBD = await DatabaseService().obterPauta();
       final estados = await DatabaseService().obterEstados();
       _cabeceira = await DatabaseService().obterCabeceira();
@@ -62,6 +65,10 @@ class HomeViewModel extends ChangeNotifier {
           calendario: pautaBD,
           historico: [],
         );
+      }
+
+      if (novasTomasEsquecidas.isNotEmpty) {
+        await P2PSyncService().notificarCoidador('TOMA_ESQUECIDA');
       }
 
     } catch (e) {
@@ -101,8 +108,6 @@ class HomeViewModel extends ChangeNotifier {
     if (hora != null) {
       await LocalNotificationService().cancelarEsquecementoHoxe(
         identificador: 'paciente_local',
-        nome: await storage.read(key: 'nome_usuario') ?? '',
-        hora: hora,
       );
     }
   }

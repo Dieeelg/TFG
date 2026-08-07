@@ -7,6 +7,7 @@ import 'servizo_api.dart';
 import 'servizo_base_datos.dart';
 import '../modelos/analise.dart';
 import 'servizo_notificacions_locais.dart';
+import 'planificador_recordatorios.dart';
 
 class P2PSyncService {
   static final P2PSyncService _instance = P2PSyncService._internal();
@@ -54,7 +55,10 @@ class P2PSyncService {
     if (tipo == 'SOLICITAR_SINCRONIZACION') {
       final tokenResposta = payload['tokenResposta'] as String?;
       if (tokenResposta != null) await enviarEstadoCompleto(tokenResposta);
-    } else if (tipo == 'ESTADO_COMPLETO' || tipo == 'TOMA_CONFIRMADA' || tipo == 'NOVO_INFORME') {
+    } else if (tipo == 'ESTADO_COMPLETO' ||
+        tipo == 'TOMA_CONFIRMADA' ||
+        tipo == 'TOMA_ESQUECIDA' ||
+        tipo == 'NOVO_INFORME') {
       final uid = payload['pacienteUid'] as String?;
       final token = payload['tokenPaciente'] as String?;
       if (uid != null && token != null) {
@@ -62,19 +66,23 @@ class P2PSyncService {
         final hora = payload['horaToma'] as String?;
         if (hora != null) {
           final nomePaciente = (payload['nome'] as String?) ?? 'Persoa supervisada';
-          if (tipo == 'TOMA_CONFIRMADA') {
-            await LocalNotificationService().cancelarEsquecementoHoxe(
-              identificador: 'coidador_$uid',
-              nome: nomePaciente,
-              hora: hora,
-            );
-          } else {
-            await LocalNotificationService().programarTomas(
-              identificador: 'coidador_$uid',
-              nome: nomePaciente,
-              hora: hora,
-            );
+          final hoxe = DateTime.now().toIso8601String().substring(0, 10);
+          final datasConToma = (payload['datasConToma'] as List?)
+                  ?.whereType<String>()
+                  .toList() ??
+              <String>[];
+          if (datasConToma.isEmpty &&
+              PlanificadorRecordatorios.eDoseTomable(payload['doseHoxe'])) {
+            datasConToma.add(hoxe);
           }
+          final estadoHoxe = payload['estadoHoxe'] as String?;
+          await LocalNotificationService().programarTomas(
+            identificador: 'coidador_$uid',
+            nome: nomePaciente,
+            hora: hora,
+            datasConToma: datasConToma,
+            estados: estadoHoxe == null ? const {} : {hoxe: estadoHoxe},
+          );
         }
         _actualizacions.add('coidador:$uid');
       }
@@ -88,8 +96,7 @@ class P2PSyncService {
       }
       if (hora != null) await _storage.write(key: 'hora_toma', value: hora);
       if (hora != null) {
-        await LocalNotificationService().programarTomas(
-          identificador: 'paciente_local',
+        await LocalNotificationService().programarTomasPaciente(
           nome: nome ?? '',
           hora: hora,
         );
@@ -110,7 +117,13 @@ class P2PSyncService {
     final token = await FirebaseMessaging.instance.getToken();
     final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
     final hoxe = DateTime.now().toIso8601String().substring(0, 10);
-    final tomables = pauta.where((d) => !d.eControl && d.dose != '0').toList();
+    final tomables = pauta
+        .where(
+          (d) =>
+              !d.eControl &&
+              PlanificadorRecordatorios.eDoseTomable(d.dose),
+        )
+        .toList();
     bool eTomada(String? estado) => estado == 'TOMADA' || estado == 'TOMADA_FORA_HORA';
     final tomadas = tomables.where((d) => eTomada(estados[d.data])).length;
     final esquecidas = tomables.where((d) => !eTomada(estados[d.data]) && d.data.compareTo(hoxe) < 0).length;
@@ -124,6 +137,10 @@ class P2PSyncService {
       'tenInforme': pauta.isNotEmpty,
       'doseHoxe': hoxeDose?.eControl == true ? 'CTRL' : hoxeDose?.dose,
       'estadoHoxe': hoxeDose == null ? null : (estados[hoxe] ?? 'PENDENTE'),
+      'datasConToma': tomables
+          .where((dia) => dia.data.compareTo(hoxe) >= 0)
+          .map((dia) => dia.data)
+          .toList(),
       'proximaVisita': cabeceira?.proximaVisita,
       'centro': cabeceira?.centro,
       'inrActual': cabeceira?.inr,
@@ -251,6 +268,13 @@ class P2PSyncService {
     }
     final analise = AnaliseModel.fromJson(jsonDecode(partes.join()) as Map<String, dynamic>);
     await _db.gardarAnalise(analise);
+    final hora = await _storage.read(key: 'hora_toma');
+    if (hora != null) {
+      await LocalNotificationService().programarTomasPaciente(
+        nome: await _storage.read(key: 'nome_usuario') ?? '',
+        hora: hora,
+      );
+    }
     for (var i = 0; i < total; i++) {
       await _storage.delete(key: 'informe_${id}_$i');
     }

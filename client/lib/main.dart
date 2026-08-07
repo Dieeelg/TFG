@@ -20,6 +20,7 @@ import 'views/autenticacion/vinculacion_coidador.dart';
 import 'views/autenticacion/vinculacion_paciente.dart';
 import 'views/autenticacion/configuracion_adicional.dart';
 import 'views/inicio_coidador.dart';
+import 'views/camara/captura_informe.dart';
 import 'servizos/servizo_sincronizacion_p2p.dart';
 import 'servizos/servizo_notificacions_locais.dart';
 import 'servizos/servizo_base_datos.dart';
@@ -52,8 +53,7 @@ void main() async {
     final hora = await storage.read(key: 'hora_toma');
     final nome = await storage.read(key: 'nome_usuario') ?? '';
     if (hora != null) {
-      await LocalNotificationService().programarTomas(
-        identificador: 'paciente_local',
+      await LocalNotificationService().programarTomasPaciente(
         nome: nome,
         hora: hora,
       );
@@ -62,8 +62,6 @@ void main() async {
       if (estados[hoxe] == 'TOMADA' || estados[hoxe] == 'TOMADA_FORA_HORA') {
         await LocalNotificationService().cancelarEsquecementoHoxe(
           identificador: 'paciente_local',
-          nome: nome,
-          hora: hora,
         );
       }
     }
@@ -117,6 +115,7 @@ class MyApp extends StatelessWidget {
         '/configuracion_adicional': (context) => const AdditionalSettingsScreen(),
         '/home': (context) => const PacienteHomeScreen(),
         '/coidador': (context) => const CaregiverHomeScreen(),
+        '/captura': (context) => const CapturaInformeScreen(),
 
       },
     );
