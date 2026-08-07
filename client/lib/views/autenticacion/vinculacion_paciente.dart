@@ -2,7 +2,6 @@ import 'package:flutter/material.dart'; // Vinculación desde o paciente.
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../modelos_vista/autenticacion/vinculacion_paciente.dart';
-import 'configuracion_escaneo.dart';
 
 class VinculacionScreen extends StatefulWidget {
   const VinculacionScreen({super.key});
@@ -50,7 +49,7 @@ class _VinculacionScreenState extends State<VinculacionScreen> {
                         ),
                         const SizedBox(height: 12),
                         const Text(
-                          'Amosa este código á persoa que te vai acompañar no teu seguimento.',
+                          'Amosa este código á persoa que te vai acompañar no teu seguimento. Ao vinculala, poderá consultar o tratamento e engadir novas follas no teu nome.',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 18,
@@ -105,13 +104,9 @@ class _VinculacionScreenState extends State<VinculacionScreen> {
                           child: ElevatedButton(
                             onPressed: vm.tenCoidador
                                 ? () {
-                                    // Se hai coidador imos á pantalla de decidir quen escanea
-                                    Navigator.push(
+                                    Navigator.pushReplacementNamed(
                                       context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            const SetupEscanearScreen(),
-                                      ),
+                                      '/configuracion_adicional',
                                     );
                                   }
                                 : null,
@@ -165,7 +160,7 @@ class _VinculacionScreenState extends State<VinculacionScreen> {
 
                         // --- BOTÓN PARA SALTAR ---
                         // Só o mostramos se aínda non se vinculou ninguén
-                        if (!vm.tenCoidador) _buildBotonSaltar(context, vm),
+                        if (!vm.tenCoidador) _buildBotonSaltar(context),
 
                         const SizedBox(height: 10),
 
@@ -222,20 +217,10 @@ class _VinculacionScreenState extends State<VinculacionScreen> {
     );
   }
 
-  /// Botón de saltar: Gardamos que o paciente escanea el mesmo e imos á Home directamente
-  Widget _buildBotonSaltar(
-    BuildContext context,
-    VinculacionPacienteViewModel vm,
-  ) {
+  Widget _buildBotonSaltar(BuildContext context) {
     return TextButton(
-      onPressed: () async {
-        //Gardamos que o paciente escanea el mesmo por defecto
-        await vm.configurarEscaneoAutomaticoPaciente();
-
-        if (context.mounted) {
-          debugPrint("Saltando directo á Home");
-          Navigator.pushReplacementNamed(context, '/configuracion_adicional');
-        }
+      onPressed: () {
+        Navigator.pushReplacementNamed(context, '/configuracion_adicional');
       },
       child: const Text(
         'Saltar vinculación',

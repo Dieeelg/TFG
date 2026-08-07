@@ -19,9 +19,6 @@ class _VinculacionPacienteFalsa extends VinculacionPacienteViewModel {
 
   @override
   Future<void> comprobarEstadoVinculacion() async {}
-
-  @override
-  Future<void> configurarEscaneoAutomaticoPaciente() async {}
 }
 
 void main() {

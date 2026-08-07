@@ -179,7 +179,7 @@ class _AxustesPacienteScreenState extends State<AxustesPacienteScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text(
-              'A outra persoa debe escanear este código desde a súa aplicación.',
+              'A outra persoa debe escanear este código desde a súa aplicación. Ao vinculala, poderá consultar o tratamento e engadir novas follas no teu nome.',
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 18),

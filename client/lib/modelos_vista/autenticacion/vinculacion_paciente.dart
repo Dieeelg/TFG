@@ -71,10 +71,4 @@ class VinculacionPacienteViewModel extends ChangeNotifier {
     _timer?.cancel();
     super.dispose();
   }
-
-  Future<void> configurarEscaneoAutomaticoPaciente() async {
-    // Se salta a vinculación, asumimos que o paciente escanea el mesmo
-    await _storage.write(key: 'quen_escanea', value: 'PACIENTE');
-    notifyListeners();
-  }
 }
