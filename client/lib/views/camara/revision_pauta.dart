@@ -338,6 +338,14 @@ class _RevisionPautaScreenState extends State<RevisionPautaScreen> {
                       ),
                     ),
                   ),
+                  const SizedBox(width: 6),
+                  IconButton(
+                    key: ValueKey('eliminar-dia-$indice'),
+                    tooltip: 'Eliminar este día',
+                    onPressed: () => _eliminarDia(indice),
+                    color: Colors.red.shade700,
+                    icon: const Icon(Icons.delete_outline),
+                  ),
                 ],
               ),
               const SizedBox(height: 10),
@@ -551,6 +559,33 @@ class _RevisionPautaScreenState extends State<RevisionPautaScreen> {
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
   );
+
+  void _eliminarDia(int indice) {
+    final eliminado = _analise.calendario[indice];
+    setState(() {
+      _analise = RevisionPauta.eliminarDia(_analise, indice);
+    });
+
+    final mensaxeiro = ScaffoldMessenger.of(context);
+    mensaxeiro
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: const Text('Eliminouse a fila da pauta.'),
+          action: SnackBarAction(
+            label: 'Desfacer',
+            onPressed: () => setState(() {
+              final posicion = indice.clamp(0, _analise.calendario.length);
+              _analise = RevisionPauta.inserirDia(
+                _analise,
+                posicion,
+                eliminado,
+              );
+            }),
+          ),
+        ),
+      );
+  }
 
   Widget _tarxeta({required Widget child}) => Container(
     width: double.infinity,

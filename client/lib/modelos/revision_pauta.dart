@@ -109,6 +109,28 @@ class RevisionPauta {
     );
   }
 
+  static AnaliseModel eliminarDia(AnaliseModel analise, int indice) {
+    final calendario = [...analise.calendario]..removeAt(indice);
+    return AnaliseModel(
+      cabeceira: analise.cabeceira,
+      calendario: calendario,
+      historico: analise.historico,
+    );
+  }
+
+  static AnaliseModel inserirDia(
+    AnaliseModel analise,
+    int indice,
+    DoseDiaModel dia,
+  ) {
+    final calendario = [...analise.calendario]..insert(indice, dia);
+    return AnaliseModel(
+      cabeceira: analise.cabeceira,
+      calendario: calendario,
+      historico: analise.historico,
+    );
+  }
+
   static AnaliseModel ordenar(AnaliseModel analise) {
     final calendario = [...analise.calendario]
       ..sort((a, b) => a.data.compareTo(b.data));
