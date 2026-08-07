@@ -41,7 +41,7 @@ dependencies:
   qr_flutter: ^4.1.0
   firebase_messaging: ^16.1.2
   flutter_secure_storage: ^9.1.0
-  mobile_scanner: ^5.1.0
+  mobile_scanner: ^6.0.11
   sqflite: ^2.3.3
   path: ^1.9.0
   image_picker: ^1.2.1
@@ -50,6 +50,7 @@ dependencies:
   flutter_local_notifications: ^20.1.0
   flutter_timezone: ^5.1.0
   timezone: ^0.10.1
+  cryptography: ^2.9.0
 
 dev_dependencies:
   flutter_test:

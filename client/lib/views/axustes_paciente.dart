@@ -5,6 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../servizos/servizo_notificacions_locais.dart';
 import '../servizos/servizo_sincronizacion_p2p.dart';
+import '../servizos/servizo_cifrado_p2p.dart';
 
 class AxustesPacienteScreen extends StatefulWidget {
   const AxustesPacienteScreen({super.key});
@@ -15,11 +16,14 @@ class AxustesPacienteScreen extends StatefulWidget {
 
 class _AxustesPacienteScreenState extends State<AxustesPacienteScreen> {
   final _storage = const FlutterSecureStorage();
+  final _cifrado = ServizoCifradoP2P();
   final _nomeController = TextEditingController();
   TimeOfDay _hora = const TimeOfDay(hour: 20, minute: 0);
   bool _modoSinxelo = false;
   bool _cargando = true;
   bool _gardando = false;
+  String? _desvinculandoId;
+  List<VinculacionP2P> _supervisores = [];
 
   @override
   void initState() {
@@ -31,6 +35,7 @@ class _AxustesPacienteScreenState extends State<AxustesPacienteScreen> {
     final nome = await _storage.read(key: 'nome_usuario') ?? '';
     final hora = await _storage.read(key: 'hora_toma') ?? '20:00';
     final modoSinxelo = await _storage.read(key: 'modo_sinxelo') == 'true';
+    final supervisores = await _cifrado.obterPorRolRemoto('COIDADOR');
     final partes = hora.split(':');
     if (!mounted) return;
     setState(() {
@@ -42,8 +47,50 @@ class _AxustesPacienteScreenState extends State<AxustesPacienteScreen> {
         );
       }
       _modoSinxelo = modoSinxelo;
+      _supervisores = supervisores;
       _cargando = false;
     });
+  }
+
+  Future<void> _desvincularSupervisor(
+    VinculacionP2P vinculacion,
+    int indice,
+  ) async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Quitar persoa supervisora?'),
+        content: Text(
+          'A persoa supervisora ${indice + 1} deixará de consultar o teu tratamento, recibir avisos e engadir follas no teu nome.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Quitar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmar != true || !mounted) return;
+    setState(() => _desvinculandoId = vinculacion.id);
+    try {
+      await P2PSyncService().desvincularCoidador(vinculacion);
+      final supervisores = await _cifrado.obterPorRolRemoto('COIDADOR');
+      if (!mounted) return;
+      setState(() => _supervisores = supervisores);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) setState(() => _desvinculandoId = null);
+    }
   }
 
   Future<void> _cambiarModo(bool activar) async {
@@ -52,10 +99,18 @@ class _AxustesPacienteScreenState extends State<AxustesPacienteScreen> {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Desactivar o modo sinxelo?'),
-          content: const Text('Volveranse mostrar as gráficas, o calendario e o resto das opcións da aplicación.'),
+          content: const Text(
+            'Volveranse mostrar as gráficas, o calendario e o resto das opcións da aplicación.',
+          ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
-            FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Desactivar')),
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Desactivar'),
+            ),
           ],
         ),
       );
@@ -80,16 +135,19 @@ class _AxustesPacienteScreenState extends State<AxustesPacienteScreen> {
   Future<void> _gardar() async {
     setState(() => _gardando = true);
     final nome = _nomeController.text.trim();
-    final hora = '${_hora.hour.toString().padLeft(2, '0')}:${_hora.minute.toString().padLeft(2, '0')}';
+    final hora =
+        '${_hora.hour.toString().padLeft(2, '0')}:${_hora.minute.toString().padLeft(2, '0')}';
     if (nome.isEmpty) {
       await _storage.delete(key: 'nome_usuario');
     } else {
       await _storage.write(key: 'nome_usuario', value: nome);
     }
     await _storage.write(key: 'hora_toma', value: hora);
-    await _storage.write(key: 'modo_sinxelo', value: _modoSinxelo ? 'true' : 'false');
-    await LocalNotificationService().programarTomas(
-      identificador: 'paciente_local',
+    await _storage.write(
+      key: 'modo_sinxelo',
+      value: _modoSinxelo ? 'true' : 'false',
+    );
+    await LocalNotificationService().programarTomasPaciente(
       nome: nome,
       hora: hora,
     );
@@ -103,9 +161,16 @@ class _AxustesPacienteScreenState extends State<AxustesPacienteScreen> {
     final token = await FirebaseMessaging.instance.getToken();
     if (!mounted) return;
     if (uid == null || token == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Non se puido xerar o código QR')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Non se puido xerar o código QR')),
+      );
       return;
     }
+    final codigoQr = await _cifrado.xerarCodigoVinculacion(
+      uidPaciente: uid,
+      tokenPaciente: token,
+    );
+    if (!mounted) return;
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
@@ -113,12 +178,20 @@ class _AxustesPacienteScreenState extends State<AxustesPacienteScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('A outra persoa debe escanear este código desde a súa aplicación.', textAlign: TextAlign.center),
+            const Text(
+              'A outra persoa debe escanear este código desde a súa aplicación. Ao vinculala, poderá consultar o tratamento e engadir novas follas no teu nome.',
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 18),
-            QrImageView(data: '$uid|$token', size: 230),
+            QrImageView(data: codigoQr, size: 230),
           ],
         ),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Pechar'))],
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Pechar'),
+          ),
+        ],
       ),
     );
   }
@@ -131,68 +204,177 @@ class _AxustesPacienteScreenState extends State<AxustesPacienteScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        backgroundColor: const Color(0xFFF8F9FA),
-        appBar: AppBar(title: const Text('Axustes', style: TextStyle(fontWeight: FontWeight.bold))),
-        body: _cargando
-            ? const Center(child: CircularProgressIndicator())
-            : ListView(
-                padding: const EdgeInsets.all(20),
-                children: [
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        const Text('Datos persoais', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: _nomeController,
-                          decoration: const InputDecoration(labelText: 'Nome (opcional)', border: OutlineInputBorder()),
-                          style: const TextStyle(fontSize: 18),
+    backgroundColor: const Color(0xFFF8F9FA),
+    appBar: AppBar(
+      title: const Text(
+        'Axustes',
+        style: TextStyle(fontWeight: FontWeight.bold),
+      ),
+    ),
+    body: _cargando
+        ? const Center(child: CircularProgressIndicator())
+        : ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Datos persoais',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
                         ),
-                        const SizedBox(height: 16),
-                        ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.access_time, color: Colors.blue, size: 34),
-                          title: const Text('Hora da toma', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                          subtitle: Text(_hora.format(context), style: const TextStyle(fontSize: 20)),
-                          trailing: const Icon(Icons.chevron_right),
-                          onTap: _seleccionarHora,
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: _nomeController,
+                        decoration: const InputDecoration(
+                          labelText: 'Nome (opcional)',
+                          border: OutlineInputBorder(),
                         ),
-                      ]),
-                    ),
+                        style: const TextStyle(fontSize: 18),
+                      ),
+                      const SizedBox(height: 16),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(
+                          Icons.access_time,
+                          color: Colors.blue,
+                          size: 34,
+                        ),
+                        title: const Text(
+                          'Hora da toma',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        subtitle: Text(
+                          _hora.format(context),
+                          style: const TextStyle(fontSize: 20),
+                        ),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: _seleccionarHora,
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 14),
-                  Card(
-                    child: SwitchListTile(
-                      contentPadding: const EdgeInsets.all(18),
-                      secondary: const Icon(Icons.visibility_outlined, color: Colors.blue, size: 34),
-                      title: const Text('Modo sinxelo', style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
-                      subtitle: const Text('Mostra unicamente a toma e o acceso aos axustes.'),
-                      value: _modoSinxelo,
-                      onChanged: _cambiarModo,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Card(
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.all(18),
-                      leading: const Icon(Icons.qr_code_2, color: Colors.blue, size: 38),
-                      title: const Text('Mostrar código QR', style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
-                      subtitle: const Text('Vincular a aplicación con outra persoa coidadora.'),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: _mostrarQr,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  FilledButton.icon(
-                    onPressed: _gardando ? null : _gardar,
-                    icon: _gardando
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Icon(Icons.save_outlined),
-                    label: const Text('Gardar cambios', style: TextStyle(fontSize: 18)),
-                    style: FilledButton.styleFrom(minimumSize: const Size(double.infinity, 56)),
-                  ),
-                ],
+                ),
               ),
-      );
+              const SizedBox(height: 14),
+              Card(
+                child: SwitchListTile(
+                  contentPadding: const EdgeInsets.all(18),
+                  secondary: const Icon(
+                    Icons.visibility_outlined,
+                    color: Colors.blue,
+                    size: 34,
+                  ),
+                  title: const Text(
+                    'Modo sinxelo',
+                    style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: const Text(
+                    'Mostra unicamente a toma e o acceso aos axustes.',
+                  ),
+                  value: _modoSinxelo,
+                  onChanged: _cambiarModo,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Card(
+                child: ListTile(
+                  contentPadding: const EdgeInsets.all(18),
+                  leading: const Icon(
+                    Icons.qr_code_2,
+                    color: Colors.blue,
+                    size: 38,
+                  ),
+                  title: const Text(
+                    'Mostrar código QR',
+                    style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: const Text(
+                    'Vincular a aplicación con outra persoa coidadora.',
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: _mostrarQr,
+                ),
+              ),
+              const SizedBox(height: 14),
+              const Text(
+                'Persoas supervisoras vinculadas',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              if (_supervisores.isEmpty)
+                const Card(
+                  child: Padding(
+                    padding: EdgeInsets.all(20),
+                    child: Text(
+                      'Non hai persoas supervisoras vinculadas.',
+                      style: TextStyle(fontSize: 17),
+                    ),
+                  ),
+                ),
+              for (var i = 0; i < _supervisores.length; i++)
+                Card(
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 8,
+                    ),
+                    leading: const CircleAvatar(
+                      child: Icon(Icons.supervisor_account_outlined),
+                    ),
+                    title: Text(
+                      'Persoa supervisora ${i + 1}',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    subtitle: const Text('Pode consultar e actualizar a pauta'),
+                    trailing: _desvinculandoId == _supervisores[i].id
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : IconButton(
+                            tooltip: 'Quitar persoa supervisora',
+                            onPressed: () =>
+                                _desvincularSupervisor(_supervisores[i], i),
+                            icon: const Icon(
+                              Icons.person_remove_outlined,
+                              color: Colors.red,
+                              size: 30,
+                            ),
+                          ),
+                  ),
+                ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: _gardando ? null : _gardar,
+                icon: _gardando
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.save_outlined),
+                label: const Text(
+                  'Gardar cambios',
+                  style: TextStyle(fontSize: 18),
+                ),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 56),
+                ),
+              ),
+            ],
+          ),
+  );
 }

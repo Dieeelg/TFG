@@ -290,15 +290,29 @@ class DatabaseService {
     }, where: 'data = ?', whereArgs: [data]);
   }
 
-  Future<void> pecharTomasVencidas() async {
+  Future<List<String>> pecharTomasVencidas() async {
     final db = await database;
     final hoxe = DateTime.now().toIso8601String().substring(0, 10);
-    await db.update(
-      'pautas',
-      {'estado': 'NON_TOMADA'},
-      where: "data < ? AND estado = 'PENDENTE' AND eControl = 0 AND dose != '0'",
-      whereArgs: [hoxe],
-    );
+    return db.transaction((txn) async {
+      final vencidas = await txn.query(
+        'pautas',
+        columns: ['id', 'data'],
+        where: "data < ? AND estado = 'PENDENTE' AND eControl = 0 "
+            "AND UPPER(TRIM(COALESCE(dose, ''))) "
+            "NOT IN ('', '0', '0.0', '0,0', 'NON', 'CTRL')",
+        whereArgs: [hoxe],
+      );
+      if (vencidas.isEmpty) return <String>[];
+      final ids = vencidas.map((fila) => fila['id'] as int).toList();
+      final marcadores = List.filled(ids.length, '?').join(',');
+      await txn.update(
+        'pautas',
+        {'estado': 'NON_TOMADA'},
+        where: 'id IN ($marcadores)',
+        whereArgs: ids,
+      );
+      return vencidas.map((fila) => fila['data'] as String).toList();
+    });
   }
 
   Future<List<Map<String, Object?>>> obterRexistrosCumprimento() async {

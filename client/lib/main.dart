@@ -4,27 +4,23 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-
 // Importación dos ViewModels
 import 'modelos_vista/autenticacion/configuracion_inicial.dart';
 import 'modelos_vista/autenticacion/vinculacion_paciente.dart';
-import 'modelos_vista/autenticacion/configuracion_escaneo.dart';
 import 'modelos_vista/autenticacion/vinculacion_coidador.dart';
 import 'modelos_vista/inicio.dart';
 
 //Importación das views
 import 'views/inicio_paciente.dart';
-import 'views/autenticacion/configuracion_escaneo.dart';
 import 'views/autenticacion/configuracion_inicial.dart';
 import 'views/autenticacion/vinculacion_coidador.dart';
 import 'views/autenticacion/vinculacion_paciente.dart';
 import 'views/autenticacion/configuracion_adicional.dart';
 import 'views/inicio_coidador.dart';
+import 'views/camara/captura_informe.dart';
 import 'servizos/servizo_sincronizacion_p2p.dart';
 import 'servizos/servizo_notificacions_locais.dart';
 import 'servizos/servizo_base_datos.dart';
-
-
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -46,14 +42,15 @@ void main() async {
   //TODO: Revisar se ten sentizo iniciar
 
   const storage = FlutterSecureStorage();
-  String? configuracionFinalizada = await storage.read(key: 'configuracion_finalizada');
+  String? configuracionFinalizada = await storage.read(
+    key: 'configuracion_finalizada',
+  );
   String? rolUsuario = await storage.read(key: 'rol_usuario');
   if (configuracionFinalizada != null && rolUsuario == 'PACIENTE') {
     final hora = await storage.read(key: 'hora_toma');
     final nome = await storage.read(key: 'nome_usuario') ?? '';
     if (hora != null) {
-      await LocalNotificationService().programarTomas(
-        identificador: 'paciente_local',
+      await LocalNotificationService().programarTomasPaciente(
         nome: nome,
         hora: hora,
       );
@@ -62,27 +59,24 @@ void main() async {
       if (estados[hoxe] == 'TOMADA' || estados[hoxe] == 'TOMADA_FORA_HORA') {
         await LocalNotificationService().cancelarEsquecementoHoxe(
           identificador: 'paciente_local',
-          nome: nome,
-          hora: hora,
         );
       }
     }
   }
 
   runApp(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider(create: (_) => SetupViewModel()),
-          ChangeNotifierProvider(create: (_) => VinculacionPacienteViewModel()),
-          ChangeNotifierProvider(create: (_) => VinculacionCoidadorViewModel()),
-          ChangeNotifierProvider(create: (_) => SetupEscanearViewModel()),
-          ChangeNotifierProvider(create: (_) => HomeViewModel()),
-        ],
-        child: MyApp(
-          xaConfigurado: configuracionFinalizada != null,
-          rolUsuario: rolUsuario,
-        ),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => SetupViewModel()),
+        ChangeNotifierProvider(create: (_) => VinculacionPacienteViewModel()),
+        ChangeNotifierProvider(create: (_) => VinculacionCoidadorViewModel()),
+        ChangeNotifierProvider(create: (_) => HomeViewModel()),
+      ],
+      child: MyApp(
+        xaConfigurado: configuracionFinalizada != null,
+        rolUsuario: rolUsuario,
       ),
+    ),
   );
 }
 
@@ -111,13 +105,13 @@ class MyApp extends StatelessWidget {
           : '/',
       routes: {
         '/': (context) => const SetupScreen(),
-        '/setup_escanear': (context) => const SetupEscanearScreen(),
         '/vincular_coidador': (context) => const VincularCoidadorScreen(),
         '/vincular_paciente': (context) => const VinculacionScreen(),
-        '/configuracion_adicional': (context) => const AdditionalSettingsScreen(),
+        '/configuracion_adicional': (context) =>
+            const AdditionalSettingsScreen(),
         '/home': (context) => const PacienteHomeScreen(),
         '/coidador': (context) => const CaregiverHomeScreen(),
-
+        '/captura': (context) => const CapturaInformeScreen(),
       },
     );
   }
