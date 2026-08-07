@@ -2,9 +2,11 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../modelos/analise.dart';
 import '../../servizos/servizo_api.dart';
 import '../../servizos/servizo_base_datos.dart';
 import '../../servizos/servizo_sincronizacion_p2p.dart';
+import 'revision_pauta.dart';
 
 class CapturaInformeScreen extends StatefulWidget {
   final String? tokenPacienteDestino;
@@ -46,7 +48,20 @@ class _CapturaInformeScreenState extends State<CapturaInformeScreen> {
       _nomeFicheiro = nome;
     });
     try {
-      final analise = await _api.enviarInforme(ficheiro);
+      final analiseExtraida = await _api.enviarInforme(ficheiro);
+      if (!mounted) return;
+      setState(() => _procesando = false);
+      final analise = await Navigator.push<AnaliseModel>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => RevisionPautaScreen(
+            analise: analiseExtraida,
+            paraEnviar: widget.tokenPacienteDestino != null,
+          ),
+        ),
+      );
+      if (analise == null || !mounted) return;
+      setState(() => _procesando = true);
       if (widget.tokenPacienteDestino == null) {
         await DatabaseService().gardarAnalise(analise);
         await P2PSyncService().notificarCoidador('NOVO_INFORME');
@@ -62,8 +77,8 @@ class _CapturaInformeScreenState extends State<CapturaInformeScreen> {
           behavior: SnackBarBehavior.floating,
           backgroundColor: const Color(0xFF268F5A),
           content: Text(widget.tokenPacienteDestino == null
-              ? 'Informe procesado e gardado correctamente'
-              : 'Informe enviado ao paciente correctamente'),
+              ? 'Informe revisado e gardado correctamente'
+              : 'Informe revisado e enviado ao paciente'),
         ),
       );
       Navigator.pop(context, true);
