@@ -204,6 +204,36 @@ class TestPreprocesamento(unittest.TestCase):
         self.assertGreaterEqual(resultado.dimensions_saida[0], 0.72 * ancho)
         self.assertGreaterEqual(resultado.dimensions_saida[1], 0.72 * alto)
 
+    def test_reconstrue_unha_folla_sobre_un_fondo_totalmente_branco(self):
+        folla = _crear_folla(430, 610, con_bordo=False)
+        orixe = np.float32([[0, 0], [429, 0], [429, 609], [0, 609]])
+        destino = np.float32([[70, 250], [460, 68], [718, 621], [328, 803]])
+        fondo = np.full((950, 800, 3), 255, dtype=np.uint8)
+
+        # A sombra desprazada queda visible unicamente nos lados dereito e
+        # inferior. Arriba e á esquerda a folla fúse por completo co fondo.
+        sombra = np.rint(destino + np.array([40, 20], dtype=np.float32)).astype(np.int32)
+        cv2.fillConvexPoly(fondo, sombra, (125, 125, 125))
+        matriz = cv2.getPerspectiveTransform(orixe, destino)
+        fotografia = cv2.warpPerspective(
+            folla,
+            matriz,
+            (800, 950),
+            dst=fondo,
+            borderMode=cv2.BORDER_TRANSPARENT,
+        )
+        entrada = _codificar(fotografia, ".jpg")
+
+        resultado = preprocesar_documento(entrada, "image/jpeg", activado=True)
+
+        self.assertTrue(resultado.aplicado)
+        self.assertEqual(resultado.metodo, "perspectiva")
+        self.assertEqual(resultado.motivo, "dous_bordos_da_folla_reconstruidos")
+        self.assertLess(
+            resultado.dimensions_saida[0] * resultado.dimensions_saida[1],
+            resultado.dimensions_orixinais[0] * resultado.dimensions_orixinais[1],
+        )
+
     def test_non_confunde_un_panel_interno_co_bordo_do_papel(self):
         panel = _crear_folla(600, 760)
         panel = (panel.astype(np.float32) * 0.92).astype(np.uint8)
@@ -314,6 +344,69 @@ class TestIntegracionPreprocesamentoAPI(unittest.TestCase):
         self.assertEqual(resposta.status_code, 400)
         chamada = self.cliente_azure.begin_analyze_document.call_args
         self.assertEqual(chamada.kwargs["body"], b"imaxe procesada")
+
+
+class TestEndpointPreprocesamento(unittest.TestCase):
+    def setUp(self):
+        self.cliente = TestClient(app)
+
+    @patch("app.routers.preprocesamento.preprocesar_documento")
+    def test_devolve_a_imaxe_preprocesada_cos_datos_de_diagnostico(self, preprocesar_mock):
+        preprocesar_mock.return_value = ResultadoPreprocesamento(
+            contido=b"imaxe procesada",
+            aplicado=True,
+            metodo="perspectiva",
+            motivo="dous_bordos_da_folla_reconstruidos",
+            angulo=-26.88,
+            confianza=0.93,
+            dimensions_orixinais=(3000, 4000),
+            dimensions_saida=(1736, 2539),
+            formato_saida="jpg",
+        )
+
+        resposta = self.cliente.post(
+            "/preprocesamento/",
+            files={"file": ("informe.jpg", b"imaxe orixinal", "image/jpeg")},
+        )
+
+        self.assertEqual(resposta.status_code, 200)
+        self.assertEqual(resposta.content, b"imaxe procesada")
+        self.assertEqual(resposta.headers["content-type"], "image/jpeg")
+        self.assertEqual(resposta.headers["x-preprocesamento-aplicado"], "true")
+        self.assertEqual(resposta.headers["x-preprocesamento-metodo"], "perspectiva")
+        self.assertEqual(resposta.headers["x-preprocesamento-dimensions-saida"], "1736x2539")
+        preprocesar_mock.assert_called_once_with(b"imaxe orixinal", "image/jpeg")
+
+    @patch("app.routers.preprocesamento.preprocesar_documento")
+    def test_sen_cambios_devolve_exactamente_o_ficheiro_orixinal(self, preprocesar_mock):
+        entrada = b"png sen cambios"
+        preprocesar_mock.return_value = ResultadoPreprocesamento(
+            contido=entrada,
+            aplicado=False,
+            metodo="sen_cambios",
+            motivo="imaxe_xa_recta",
+            dimensions_orixinais=(800, 1000),
+            dimensions_saida=(800, 1000),
+        )
+
+        resposta = self.cliente.post(
+            "/preprocesamento/",
+            files={"file": ("informe.png", entrada, "image/png")},
+        )
+
+        self.assertEqual(resposta.status_code, 200)
+        self.assertEqual(resposta.content, entrada)
+        self.assertEqual(resposta.headers["content-type"], "image/png")
+        self.assertEqual(resposta.headers["x-preprocesamento-aplicado"], "false")
+        self.assertEqual(resposta.headers["x-preprocesamento-motivo"], "imaxe_xa_recta")
+
+    def test_rexeita_un_tipo_non_soportado(self):
+        resposta = self.cliente.post(
+            "/preprocesamento/",
+            files={"file": ("informe.txt", b"texto", "text/plain")},
+        )
+
+        self.assertEqual(resposta.status_code, 400)
 
 
 if __name__ == "__main__":

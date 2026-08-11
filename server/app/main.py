@@ -5,6 +5,7 @@ from app.routers.extraccion import router as extraccion_router
 from app.routers.system import router as system_router
 from app.routers.notificar import router as notificar_router
 from app.routers.centros import router as centros_router
+from app.routers.preprocesamento import router as preprocesamento_router
 import logging
 
 # uvicorn app.main:app --reload
@@ -30,9 +31,19 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=[
+        "X-Preprocesamento-Aplicado",
+        "X-Preprocesamento-Metodo",
+        "X-Preprocesamento-Motivo",
+        "X-Preprocesamento-Angulo",
+        "X-Preprocesamento-Confianza",
+        "X-Preprocesamento-Dimensions-Orixinais",
+        "X-Preprocesamento-Dimensions-Saida",
+    ],
 )
 
 app.include_router(extraccion_router)
 app.include_router(system_router)
 app.include_router(notificar_router)
 app.include_router(centros_router)
+app.include_router(preprocesamento_router)

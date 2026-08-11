@@ -25,6 +25,7 @@ MAX_AREA_FOLLA_CLARA = 0.82
 MIN_ANGULO_CORRECCION = 1.0
 MAX_ANGULO_PERSPECTIVA = 15.0
 MAX_ANGULO_INCLINACION = 30.0
+MIN_ANGULO_BORDOS_PARCIAIS = 12.0
 MAX_PIXELES_PREPROCESAMENTO = 30_000_000
 MAX_LADO_AZURE = 10_000
 MAX_BYTES_PREDETERMINADOS = 3_900_000
@@ -128,6 +129,35 @@ def preprocesar_documento(
             return _sen_cambios(contido, "deteccion_sen_confianza", dimensions)
 
         angulo, confianza, puntos_linas = correccion
+
+        # Se a folla está enriba doutra superficie branca, dous dos seus
+        # bordos poden desaparecer visualmente e non formar un contorno
+        # pechado. Esta terceira vía só se tenta con xiros amplos e reconstrúe
+        # o cuadrilátero a partir de dous bordos físicos adxacentes. Os
+        # requisitos son deliberadamente estritos para conservar intacto o
+        # comportamento dos casos nos que os detectores anteriores xa van ben.
+        if abs(angulo) >= MIN_ANGULO_BORDOS_PARCIAIS:
+            candidato_parcial = _buscar_folla_con_bordos_parciais(
+                imaxe_deteccion,
+                gris,
+                bordos,
+                angulo,
+                puntos_linas,
+            )
+            if candidato_parcial is not None:
+                cuadrilatero, confianza_parcial = candidato_parcial
+                resultado = _corrixir_perspectiva(
+                    contido,
+                    imaxe,
+                    cuadrilatero / escala,
+                    confianza_parcial,
+                    tipo,
+                    motivo="dous_bordos_da_folla_reconstruidos",
+                    max_angulo=MAX_ANGULO_INCLINACION,
+                )
+                if resultado is not None:
+                    return resultado
+
         if abs(angulo) < MIN_ANGULO_CORRECCION:
             return _sen_cambios(contido, "imaxe_xa_recta", dimensions)
 
@@ -447,6 +477,258 @@ def _impar(valor: int) -> int:
     return valor if valor % 2 else valor + 1
 
 
+def _buscar_folla_con_bordos_parciais(
+    imaxe: np.ndarray,
+    gris: np.ndarray,
+    bordos: np.ndarray,
+    angulo: float,
+    puntos_linas: np.ndarray,
+) -> Optional[tuple[np.ndarray, float]]:
+    """Reconstrúe unha folla cando só se ven dous bordos adxacentes.
+
+    Esta situación aparece ao fotografar unha folla branca enriba doutra:
+    a sombra marca dous lados, pero os outros quedan fundidos coa superficie
+    inferior. Non se usa para xiros pequenos e cada lado aceptado debe separar
+    superficies distintas; as liñas impresas teñen branco a ambos os lados e
+    quedan descartadas por esa comprobación.
+    """
+
+    alto, ancho = gris.shape[:2]
+    dimension = float(min(alto, ancho))
+    area_imaxe = float(alto * ancho)
+    detector = cv2.createLineSegmentDetector(cv2.LSD_REFINE_STD)
+    detectadas = detector.detect(gris)[0]
+    if detectadas is None:
+        return None
+
+    segmentos = []
+    for x1, y1, x2, y2 in detectadas[:, 0]:
+        inicio = np.array([x1, y1], dtype=np.float32)
+        fin = np.array([x2, y2], dtype=np.float32)
+        vector = fin - inicio
+        lonxitude = float(np.linalg.norm(vector))
+        if lonxitude < 0.18 * dimension:
+            continue
+
+        angulo_segmento = float(np.degrees(np.arctan2(vector[1], vector[0])))
+        angulo_normalizado = _normalizar_angulo(angulo_segmento)
+        if abs(angulo_normalizado - angulo) > 4.0:
+            continue
+
+        # A orientación canónica mantén coherentes o vector normal e a
+        # distancia da liña á orixe, necesarias para agrupar fragmentos.
+        orientacion = angulo_segmento % 180.0
+        unidade = np.array(
+            [np.cos(np.radians(orientacion)), np.sin(np.radians(orientacion))],
+            dtype=np.float32,
+        )
+        normal = np.array([-unidade[1], unidade[0]], dtype=np.float32)
+        distancia = float(np.dot((inicio + fin) / 2.0, normal))
+        segmentos.append(
+            {
+                "angulo": orientacion,
+                "unidade": unidade,
+                "normal": normal,
+                "distancia": distancia,
+                "lonxitude": lonxitude,
+                "puntos": [inicio, fin],
+            }
+        )
+
+    if len(segmentos) < 2:
+        return None
+
+    grupos: list[dict] = []
+    for segmento in sorted(segmentos, key=lambda valor: valor["lonxitude"], reverse=True):
+        grupo_atopado = None
+        for grupo in grupos:
+            diferenza = abs(segmento["angulo"] - grupo["angulo"])
+            diferenza = min(diferenza, 180.0 - diferenza)
+            if diferenza <= 2.5 and abs(segmento["distancia"] - grupo["distancia"]) <= 0.018 * dimension:
+                grupo_atopado = grupo
+                break
+        if grupo_atopado is None:
+            grupos.append(segmento.copy())
+        else:
+            grupo_atopado["puntos"].extend(segmento["puntos"])
+            grupo_atopado["lonxitude"] += segmento["lonxitude"]
+
+    linhas = []
+    for grupo in grupos:
+        unidade = grupo["unidade"]
+        puntos = np.asarray(grupo["puntos"], dtype=np.float32)
+        proxeccions = puntos @ unidade
+        inicio = unidade * float(proxeccions.min()) + grupo["normal"] * grupo["distancia"]
+        fin = unidade * float(proxeccions.max()) + grupo["normal"] * grupo["distancia"]
+        alcance = float(np.linalg.norm(fin - inicio))
+        if alcance < 0.30 * dimension:
+            continue
+        contraste = _contraste_segmento(gris, inicio, fin)
+        if contraste < 5.5:
+            continue
+        linhas.append(
+            {
+                "angulo": grupo["angulo"],
+                "inicio": inicio,
+                "fin": fin,
+                "unidade": unidade,
+                "normal": grupo["normal"],
+                "distancia": grupo["distancia"],
+                "alcance": alcance,
+                "contraste": contraste,
+            }
+        )
+
+    if len(linhas) < 2:
+        return None
+
+    hsv = cv2.cvtColor(imaxe, cv2.COLOR_BGR2HSV)
+    mellor: Optional[tuple[np.ndarray, float]] = None
+    mellor_confianza = 0.0
+    for indice, primeira in enumerate(linhas):
+        for segunda in linhas[indice + 1 :]:
+            diferenza = abs(primeira["angulo"] - segunda["angulo"])
+            diferenza = min(diferenza, 180.0 - diferenza)
+            if not 78.0 <= diferenza <= 102.0:
+                continue
+
+            esquina = _interseccion_linhas(primeira, segunda)
+            if esquina is None:
+                continue
+            if not (-0.04 * ancho <= esquina[0] <= 1.04 * ancho):
+                continue
+            if not (-0.04 * alto <= esquina[1] <= 1.04 * alto):
+                continue
+
+            extremos = []
+            valido = True
+            for linha in (primeira, segunda):
+                candidatos = (linha["inicio"], linha["fin"])
+                afastamentos = [float(np.linalg.norm(punto - esquina)) for punto in candidatos]
+                distancia_proxima = min(afastamentos)
+                distancia_longa = max(afastamentos)
+                if distancia_proxima > 0.18 * distancia_longa:
+                    valido = False
+                    break
+                extremo = candidatos[int(np.argmax(afastamentos))]
+                vector = extremo - esquina
+                if np.linalg.norm(vector) < 0.34 * dimension:
+                    valido = False
+                    break
+                extremos.append(vector)
+            if not valido:
+                continue
+
+            proporcion_lados = min(np.linalg.norm(extremos[0]), np.linalg.norm(extremos[1])) / max(
+                np.linalg.norm(extremos[0]), np.linalg.norm(extremos[1])
+            )
+            if not 0.52 <= proporcion_lados <= 0.82:
+                continue
+
+            cuadrilatero = _ordenar_puntos(
+                np.array(
+                    [
+                        esquina,
+                        esquina + extremos[0],
+                        esquina + extremos[0] + extremos[1],
+                        esquina + extremos[1],
+                    ],
+                    dtype=np.float32,
+                )
+            )
+            if len(np.unique(np.rint(cuadrilatero), axis=0)) != 4:
+                continue
+            if not cv2.isContourConvex(cuadrilatero.astype(np.int32)):
+                continue
+
+            proporcion_area = abs(cv2.contourArea(cuadrilatero)) / area_imaxe
+            if not 0.24 <= proporcion_area <= 0.62:
+                continue
+            marxe = 0.035 * max(alto, ancho)
+            if np.any(
+                (cuadrilatero[:, 0] < -marxe)
+                | (cuadrilatero[:, 0] > ancho - 1 + marxe)
+                | (cuadrilatero[:, 1] < -marxe)
+                | (cuadrilatero[:, 1] > alto - 1 + marxe)
+            ):
+                continue
+
+            centro = cuadrilatero.mean(axis=0)
+            if np.linalg.norm(centro - np.array([ancho / 2.0, alto / 2.0])) > 0.24 * np.hypot(ancho, alto):
+                continue
+
+            dentro = np.array(
+                [cv2.pointPolygonTest(cuadrilatero, tuple(map(float, punto)), False) >= 0 for punto in puntos_linas],
+                dtype=bool,
+            )
+            proporcion_linas_dentro = float(np.mean(dentro)) if len(dentro) else 0.0
+            if proporcion_linas_dentro < 0.82:
+                continue
+
+            mascara = np.zeros((alto, ancho), dtype=np.uint8)
+            cv2.fillConvexPoly(mascara, np.rint(cuadrilatero).astype(np.int32), 255)
+            erosion = max(5, _impar(int(round(dimension * 0.025))))
+            interior = cv2.erode(mascara, np.ones((erosion, erosion), dtype=np.uint8)) > 0
+            if not np.any(interior):
+                continue
+            proporcion_papel = float(
+                np.mean((hsv[:, :, 1][interior] <= 22) & (hsv[:, :, 2][interior] >= 105))
+            )
+            if proporcion_papel < 0.76:
+                continue
+
+            soportes = _soporte_de_bordo(bordos, cuadrilatero)
+            contrastes = _contrastes_dos_lados(gris, cuadrilatero)
+            lados_fisicos = sum(
+                soporte >= 0.55 and abs(contraste) >= 5.5
+                for soporte, contraste in zip(soportes, contrastes)
+            )
+            # Tres ou catro lados visibles pertencen ao detector de contornos
+            # normal. Este fallback queda reservado ao caso ambiguo de dous.
+            if lados_fisicos != 2:
+                continue
+
+            confianza = (
+                0.24 * min(1.0, proporcion_linas_dentro)
+                + 0.22 * min(1.0, proporcion_papel)
+                + 0.20 * min(1.0, np.mean(sorted(soportes, reverse=True)[:2]))
+                + 0.18 * min(1.0, np.mean(sorted(map(abs, contrastes), reverse=True)[:2]) / 18.0)
+                + 0.16 * min(1.0, proporcion_area / 0.36)
+            )
+            if confianza >= 0.78 and confianza > mellor_confianza:
+                mellor = (cuadrilatero, float(confianza))
+                mellor_confianza = float(confianza)
+
+    return mellor
+
+
+def _contraste_segmento(gris: np.ndarray, inicio: np.ndarray, fin: np.ndarray) -> float:
+    vector = fin - inicio
+    lonxitude = float(np.linalg.norm(vector))
+    if lonxitude == 0:
+        return 0.0
+    normal = np.array([-vector[1], vector[0]], dtype=np.float32) / lonxitude
+    desprazamento = max(7.0, min(gris.shape) * 0.018)
+    proporcions = np.linspace(0.12, 0.88, max(40, int(lonxitude / 4)))
+    base = inicio[None, :] + proporcions[:, None] * vector[None, :]
+    medianas = []
+    for signo in (-1.0, 1.0):
+        mostras = base + signo * normal[None, :] * desprazamento
+        xs = np.clip(np.rint(mostras[:, 0]).astype(int), 0, gris.shape[1] - 1)
+        ys = np.clip(np.rint(mostras[:, 1]).astype(int), 0, gris.shape[0] - 1)
+        medianas.append(float(np.median(gris[ys, xs])))
+    return abs(medianas[0] - medianas[1])
+
+
+def _interseccion_linhas(primeira: dict, segunda: dict) -> Optional[np.ndarray]:
+    matriz = np.array([primeira["normal"], segunda["normal"]], dtype=np.float64)
+    determinante = float(np.linalg.det(matriz))
+    if abs(determinante) < 1e-4:
+        return None
+    termos = np.array([primeira["distancia"], segunda["distancia"]], dtype=np.float64)
+    return np.linalg.solve(matriz, termos).astype(np.float32)
+
+
 def _ordenar_puntos(puntos: np.ndarray) -> np.ndarray:
     suma = puntos.sum(axis=1)
     diferenza = np.diff(puntos, axis=1).reshape(-1)
@@ -504,6 +786,14 @@ def _contraste_do_contorno(gris: np.ndarray, puntos: np.ndarray) -> float:
     # silueta exterior do papel.
     # A banda queda suficientemente afastada para non medir un marco impreso
     # preto que estea situado xusto no bordo da folla.
+    contrastes = _contrastes_dos_lados(gris, puntos)
+
+    # O percentil 25 obriga a que, como mínimo, tres lados presenten un
+    # contraste compatible cun límite real da folla.
+    return float(np.percentile(contrastes, 25))
+
+
+def _contrastes_dos_lados(gris: np.ndarray, puntos: np.ndarray) -> list[float]:
     desprazamento = max(8.0, min(gris.shape) * 0.03)
     contrastes = []
     for indice in range(4):
@@ -525,9 +815,7 @@ def _contraste_do_contorno(gris: np.ndarray, puntos: np.ndarray) -> float:
         ye = np.clip(np.rint(exterior[:, 1]).astype(int), 0, gris.shape[0] - 1)
         contrastes.append(float(np.median(gris[yi, xi])) - float(np.median(gris[ye, xe])))
 
-    # O percentil 25 obriga a que, como mínimo, tres lados presenten un
-    # contraste compatible cun límite real da folla.
-    return float(np.percentile(contrastes, 25))
+    return contrastes
 
 
 def _corrixir_perspectiva(
