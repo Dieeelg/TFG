@@ -1,18 +1,32 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart'; // Estado da pantalla de inicio.
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../modelos/pauta_toma.dart';
 import '../modelos/analise.dart';
 import '../modelos/cabeceira.dart';
+import '../servizos/servizo_api.dart';
 import '../servizos/servizo_base_datos.dart';
 import '../servizos/servizo_sincronizacion_p2p.dart';
 import '../servizos/servizo_notificacions_locais.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class HomeViewModel extends ChangeNotifier {
   bool _cargando = false;
+  bool _preferenciasCargadas = false;
+  bool _modoSinxelo = false;
+  String? _nomeUsuario;
+  String _horaToma = '20:00';
   AnaliseModel? _ultimaAnalise;
   CabeceiraModel? _cabeceira;
+  StreamSubscription<String>? _syncSubscription;
+  Timer? _pecheDiaTimer;
+  bool _iniciado = false;
 
   bool get cargando => _cargando;
+  bool get preferenciasCargadas => _preferenciasCargadas;
+  bool get modoSinxelo => _modoSinxelo;
+  String? get nomeUsuario => _nomeUsuario;
+  String get horaToma => _horaToma;
   CabeceiraModel? get cabeceira => _cabeceira;
   PautaToma? get tomaHoxe {
     if (pautaSemanal.isEmpty) return null;
@@ -22,6 +36,36 @@ class HomeViewModel extends ChangeNotifier {
   }
 
   List<PautaToma> pautaSemanal = [];
+
+  Future<void> iniciar() async {
+    if (_iniciado) return;
+    _iniciado = true;
+    _programarPecheDoDia();
+    _syncSubscription = P2PSyncService().actualizacions.listen((evento) {
+      if (evento == 'paciente_local') {
+        cargarPreferencias();
+        cargarDatosHome();
+      }
+    });
+    await Future.wait([cargarPreferencias(), cargarDatosHome()]);
+  }
+
+  Future<void> reactivar() async {
+    await Future.wait([cargarPreferencias(), cargarDatosHome()]);
+  }
+
+  Future<void> cargarPreferencias() async {
+    const storage = FlutterSecureStorage();
+    final nome = await storage.read(key: 'nome_usuario');
+    final hora = await storage.read(key: 'hora_toma');
+    final modoSinxelo = await storage.read(key: 'modo_sinxelo') == 'true';
+
+    _nomeUsuario = nome?.trim().isEmpty == true ? null : nome?.trim();
+    _horaToma = hora ?? '20:00';
+    _modoSinxelo = modoSinxelo;
+    _preferenciasCargadas = true;
+    notifyListeners();
+  }
 
   String get doseHoxe {
     if (_ultimaAnalise == null || _ultimaAnalise!.calendario.isEmpty) {
@@ -131,5 +175,34 @@ class HomeViewModel extends ChangeNotifier {
       debugPrint("Coidador notificado correctamente");
     }
     notifyListeners();
+  }
+
+  Future<String> buscarTelefonoCentro(String centro) async {
+    final info = await ApiService().buscarCentro(centro);
+    final telefono = info['telefono'] as String?;
+    if (telefono == null || telefono.trim().isEmpty) {
+      throw Exception('O centro non ten un telÃ©fono dispoÃ±ible');
+    }
+    return telefono.trim();
+  }
+
+  void _programarPecheDoDia() {
+    _pecheDiaTimer?.cancel();
+    final agora = DateTime.now();
+    final medianoite = DateTime(agora.year, agora.month, agora.day + 1);
+    _pecheDiaTimer = Timer(
+      medianoite.difference(agora) + const Duration(seconds: 1),
+      () {
+        cargarDatosHome();
+        _programarPecheDoDia();
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _syncSubscription?.cancel();
+    _pecheDiaTimer?.cancel();
+    super.dispose();
   }
 }
