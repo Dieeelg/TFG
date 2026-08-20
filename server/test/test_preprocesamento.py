@@ -7,6 +7,7 @@ import numpy as np
 from fastapi.testclient import TestClient
 
 from app.internal.preprocesamento import ResultadoPreprocesamento, preprocesar_documento
+from app.routers.preprocesamento import _headers_diagnostico, _tipo_e_extension_saida
 from server.app.main import app
 
 
@@ -58,6 +59,57 @@ def _rotar(imaxe: np.ndarray, angulo: float) -> np.ndarray:
 
 
 class TestPreprocesamento(unittest.TestCase):
+    def test_entradas_que_deben_pasar_sen_cambios(self):
+        casos = [
+            (b"", "image/jpeg", "ficheiro_baleiro"),
+            (b"datos", "text/plain", "tipo_non_soportado"),
+        ]
+        for entrada, tipo, motivo in casos:
+            with self.subTest(motivo=motivo):
+                resultado = preprocesar_documento(entrada, tipo, activado=True)
+                self.assertFalse(resultado.aplicado)
+                self.assertEqual(resultado.motivo, motivo)
+                self.assertEqual(resultado.contido, entrada)
+
+    def test_dimensions_invalidas_pasan_sen_cambios(self):
+        pequena = _codificar(np.full((100, 200, 3), 255, dtype=np.uint8))
+        normal = _codificar(np.full((200, 200, 3), 255, dtype=np.uint8))
+
+        resultado_pequena = preprocesar_documento(pequena, "image/png", activado=True)
+        with patch("app.internal.preprocesamento.MAX_LADO_AZURE", 180):
+            resultado_grande = preprocesar_documento(normal, "image/png", activado=True)
+
+        self.assertEqual(resultado_pequena.motivo, "imaxe_demasiado_pequena")
+        self.assertEqual(resultado_grande.motivo, "dimensions_fora_do_limite")
+
+    def test_erros_do_procesamento_nunca_bloquean_o_ocr(self):
+        entrada = _codificar(_crear_folla())
+        for erro, motivo in (
+            (cv2.error("erro OpenCV"), "erro_de_preprocesamento"),
+            (RuntimeError("erro inesperado"), "erro_inesperado"),
+        ):
+            with self.subTest(motivo=motivo):
+                with patch("app.internal.preprocesamento._preparar_deteccion", side_effect=erro):
+                    resultado = preprocesar_documento(entrada, "image/png", activado=True)
+                self.assertFalse(resultado.aplicado)
+                self.assertEqual(resultado.motivo, motivo)
+                self.assertEqual(resultado.contido, entrada)
+
+    def test_configuracion_por_variables_de_contorna(self):
+        entrada = _codificar(_crear_folla())
+        with patch.dict(os.environ, {"PREPROCESS_IMAGES": "off"}):
+            resultado = preprocesar_documento(entrada, "image/png")
+        self.assertEqual(resultado.motivo, "desactivado")
+
+        with patch.dict(os.environ, {"PREPROCESS_MAX_BYTES": "non-numero"}):
+            from app.internal.preprocesamento import _limite_bytes_saida
+
+            self.assertEqual(_limite_bytes_saida(), 3_900_000)
+
+    def test_heif_detectase_pola_cabeceira_ainda_sen_mime(self):
+        entrada = b"\x00\x00\x00\x18ftypheic" + b"datos"
+        resultado = preprocesar_documento(entrada, "application/octet-stream", activado=True)
+        self.assertEqual(resultado.motivo, "heif_non_decodificable")
     def test_pdf_pasa_byte_a_byte_sen_cambios(self):
         pdf = b"%PDF-1.7\ncontido de proba"
 
@@ -407,6 +459,34 @@ class TestEndpointPreprocesamento(unittest.TestCase):
         )
 
         self.assertEqual(resposta.status_code, 400)
+
+    def test_helpers_de_tipo_e_cabeceiras_cobren_valores_baleiros(self):
+        resultado = ResultadoPreprocesamento(
+            contido=b"datos",
+            aplicado=False,
+            metodo="sen_cambios",
+            motivo="proba",
+            formato_saida="formato-descoñecido",
+        )
+
+        self.assertEqual(
+            _tipo_e_extension_saida(resultado, "tipo/descoñecido"),
+            ("tipo/descoñecido", "bin"),
+        )
+        resultado_png = ResultadoPreprocesamento(
+            contido=b"png",
+            aplicado=True,
+            metodo="perspectiva",
+            motivo="proba",
+            formato_saida="png",
+        )
+        self.assertEqual(
+            _tipo_e_extension_saida(resultado_png, "application/octet-stream"),
+            ("image/png", "png"),
+        )
+        cabeceiras = _headers_diagnostico(resultado)
+        self.assertEqual(cabeceiras["X-Preprocesamento-Dimensions-Orixinais"], "")
+        self.assertEqual(cabeceiras["X-Preprocesamento-Dimensions-Saida"], "")
 
 
 if __name__ == "__main__":

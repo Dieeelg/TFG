@@ -52,6 +52,21 @@ class TestSintromUnit(unittest.TestCase):
                 self.assertEqual(resultado["data"], "2026-05-20")
                 self.assertEqual(resultado["control"], True)
 
+    def test_parse_dose_cell_control_sen_mes_usa_a_proxima_visita(self):
+        proxima_visita = datetime(2026, 5, 20)
+
+        resultado = parse_dose_cell(
+            "CONTROL ilexible",
+            2026,
+            5,
+            proxima_visita,
+        )
+
+        self.assertEqual(resultado["data"], "2026-05-20")
+        self.assertEqual(resultado["dia"], 20)
+        self.assertIsNone(resultado["dose"])
+        self.assertTrue(resultado["control"])
+
     def test_parse_dose_cell_cambio_ano(self):
         """
         Comprobamos que no caso de que no calendario teñamos cambio de ano, este se realice de forma correcta
@@ -154,6 +169,21 @@ class TestSintromUnit(unittest.TestCase):
         """Comprobación de que devolve None se recibe unha entrada baleira"""
         self.assertIsNone(extraer_dose_semanal(None))
         self.assertIsNone(extraer_dose_semanal(""))
+
+    def test_confianza_media_con_e_sen_confianzas(self):
+        documento = type("Documento", (), {
+            "fields": {
+                "a": type("Campo", (), {"confidence": 0.8})(),
+                "b": type("Campo", (), {"confidence": 0.6})(),
+                "sen_confianza": type("Campo", (), {"confidence": None})(),
+            }
+        })()
+        self.assertAlmostEqual(calcular_confianza_media(documento), 0.7)
+
+        documento.fields = {
+            "sen_confianza": type("Campo", (), {"confidence": None})(),
+        }
+        self.assertEqual(calcular_confianza_media(documento), 1.0)
 
 if __name__ == '__main__':
     unittest.main()

@@ -176,7 +176,7 @@ async def iniciar_extraccion(file: UploadFile = File(... ,description="Imaxe ou 
                             if datos:
                                 if datos["control"] and dt_prox :
                                     data_celda = parsear_data(datos["data"])
-                                    if data_celda.date != dt_prox.date():
+                                    if data_celda.date() != dt_prox.date():
                                         logging.warning("A data do control extraída da táboa é errónea, collendo a de próxima visita.")
                                         # Poñemos a data de próxima visita
                                         datos["data"] = dt_prox.date().isoformat()
