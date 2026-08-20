@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart'; // Inicio da configuración.
 import 'package:provider/provider.dart';
 import '../../modelos_vista/autenticacion/configuracion_inicial.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'vinculacion_paciente.dart';
 import 'vinculacion_coidador.dart';
 
@@ -11,16 +10,11 @@ class SetupScreen extends StatelessWidget {
   Future<void> _manexarSeleccion(BuildContext context, bool esPaciente) async {
     final vm = context.read<SetupViewModel>();
 
-    final resultado = await vm.autenticar();
+    final resultado = await vm.autenticar(esPaciente: esPaciente);
 
     if (!context.mounted) return;
 
     if (resultado == AuthResult.exito) {
-      await const FlutterSecureStorage().write(
-        key: 'rol_usuario',
-        value: esPaciente ? 'PACIENTE' : 'COIDADOR',
-      );
-      if (!context.mounted) return;
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -48,11 +42,15 @@ class SetupScreen extends StatelessWidget {
           child: Column(
             children: [
               const SizedBox(height: 60),
-              const Text('Benvido',
-                  style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+              const Text(
+                'Benvido',
+                style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 12),
-              const Text('Quen vai usar a aplicación?',
-                  style: TextStyle(fontSize: 18, color: Color(0xFF34495E))),
+              const Text(
+                'Quen vai usar a aplicación?',
+                style: TextStyle(fontSize: 18, color: Color(0xFF34495E)),
+              ),
               const SizedBox(height: 40),
 
               _buildOptionCard(
@@ -78,6 +76,7 @@ class SetupScreen extends StatelessWidget {
       ),
     );
   }
+
   Widget _buildOptionCard({
     required String title,
     required String subtitle,
@@ -108,7 +107,10 @@ class SetupScreen extends StatelessWidget {
               onTap: estaCargando ? null : onTap,
               borderRadius: BorderRadius.circular(20),
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 40.0, horizontal: 24.0),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 40.0,
+                  horizontal: 24.0,
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -119,13 +121,19 @@ class SetupScreen extends StatelessWidget {
                     const SizedBox(height: 20),
                     Text(
                       title,
-                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Text(
                       subtitle,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 16, color: Color(0xFF34495E)),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: Color(0xFF34495E),
+                      ),
                     ),
                   ],
                 ),

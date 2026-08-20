@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart'; // Pantalla de inicio do paciente.
-import 'dart:async';
 import 'package:provider/provider.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../modelos/pauta_toma.dart';
-import '../servizos/servizo_api.dart';
-import '../servizos/servizo_sincronizacion_p2p.dart';
 import '../modelos_vista/inicio.dart';
 import '../compoñentes/representacion_dose.dart';
 import 'camara/captura_informe.dart';
@@ -22,43 +18,12 @@ class PacienteHomeScreen extends StatefulWidget {
 
 class _PacienteHomeScreenState extends State<PacienteHomeScreen>
     with WidgetsBindingObserver {
-  bool _preferenciaCargada = false;
-  bool _modoSinxelo = false;
-  String? _nomeUsuario;
-  String _horaToma = '20:00';
-  StreamSubscription<String>? _syncSubscription;
-  Timer? _pecheDiaTimer;
-
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _programarPecheDoDia();
-    _syncSubscription = P2PSyncService().actualizacions.listen((evento) {
-      if (evento == 'paciente_local' && mounted) {
-        _cargarPreferencias();
-        context.read<HomeViewModel>().cargarDatosHome();
-      }
-    });
-    _cargarPreferencias();
-    // Cargamos os datos da BD ao entrar
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<HomeViewModel>().cargarDatosHome();
-    });
-  }
-
-  Future<void> _cargarPreferencias() async {
-    const storage = FlutterSecureStorage();
-    final nome = await storage.read(key: 'nome_usuario');
-    final hora = await storage.read(key: 'hora_toma');
-    final modoSinxelo = await storage.read(key: 'modo_sinxelo') == 'true';
-
-    if (!mounted) return;
-    setState(() {
-      _nomeUsuario = nome?.trim().isEmpty == true ? null : nome?.trim();
-      _horaToma = hora ?? '20:00';
-      _modoSinxelo = modoSinxelo;
-      _preferenciaCargada = true;
+      context.read<HomeViewModel>().iniciar();
     });
   }
 
@@ -69,7 +34,7 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen>
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       body: SafeArea(
-        child: vm.cargando || !_preferenciaCargada
+        child: vm.cargando || !vm.preferenciasCargadas
             ? const Center(
                 child: CircularProgressIndicator(),
               ) // Indicador de carga
@@ -89,7 +54,7 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen>
                       const SizedBox(height: 20),
                       if (vm.pautaSemanal.isEmpty)
                         _buildEmptyState(context)
-                      else if (_modoSinxelo) ...[
+                      else if (vm.modoSinxelo) ...[
                         if (vm.tomaHoxe == null)
                           _buildNoPendingState()
                         else if (vm.tomaHoxe!.eControl)
@@ -117,7 +82,7 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen>
                 ),
               ),
       ),
-      bottomNavigationBar: _modoSinxelo ? null : _buildBottomBar(context),
+      bottomNavigationBar: vm.modoSinxelo ? null : _buildBottomBar(context),
     );
   }
 
@@ -176,7 +141,9 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen>
       children: [
         Expanded(
           child: Text(
-            _nomeUsuario == null ? 'Bo día,' : 'Bo día, $_nomeUsuario',
+            context.read<HomeViewModel>().nomeUsuario == null
+                ? 'Bo día,'
+                : 'Bo día, ${context.read<HomeViewModel>().nomeUsuario}',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(fontSize: 31, fontWeight: FontWeight.bold),
@@ -199,9 +166,9 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen>
                     builder: (_) => const AxustesPacienteScreen(),
                   ),
                 );
+                if (!mounted) return;
                 if (cambiou == true) {
-                  await _cargarPreferencias();
-                  if (mounted) context.read<HomeViewModel>().cargarDatosHome();
+                  await context.read<HomeViewModel>().reactivar();
                 }
               },
               icon: const Icon(Icons.settings_outlined, size: 34),
@@ -287,7 +254,7 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen>
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      'Ás $_horaToma',
+                      'Ás ${context.read<HomeViewModel>().horaToma}',
                       style: const TextStyle(
                         color: Colors.black87,
                         fontSize: 18,
@@ -470,32 +437,16 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen>
     );
   }
 
-  void _programarPecheDoDia() {
-    _pecheDiaTimer?.cancel();
-    final agora = DateTime.now();
-    final medianoite = DateTime(agora.year, agora.month, agora.day + 1);
-    _pecheDiaTimer = Timer(
-      medianoite.difference(agora) + const Duration(seconds: 1),
-      () {
-        if (mounted) context.read<HomeViewModel>().cargarDatosHome();
-        _programarPecheDoDia();
-      },
-    );
-  }
-
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      _cargarPreferencias();
-      context.read<HomeViewModel>().cargarDatosHome();
+      context.read<HomeViewModel>().reactivar();
     }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _syncSubscription?.cancel();
-    _pecheDiaTimer?.cancel();
     super.dispose();
   }
 
@@ -733,13 +684,9 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen>
 
   Future<void> _chamarAoCentro(String centro) async {
     try {
-      final info = await ApiService().buscarCentro(centro);
-      final telefono = info['telefono'] as String?;
-      if (telefono == null || telefono.trim().isEmpty) {
-        throw Exception(
-          'O catálogo da Xunta non contén un teléfono para este centro',
-        );
-      }
+      final telefono = await context.read<HomeViewModel>().buscarTelefonoCentro(
+        centro,
+      );
       final uri = Uri(scheme: 'tel', path: telefono);
       if (!await launchUrl(uri)) {
         throw Exception('Non se puido abrir o marcador do teléfono');

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../modelos/analise.dart';
 import '../../modelos/dose_dia.dart';
 import '../../modelos/revision_pauta.dart';
+import '../../modelos_vista/revision_pauta.dart';
 
-class RevisionPautaScreen extends StatefulWidget {
+class RevisionPautaScreen extends StatelessWidget {
   final AnaliseModel analise;
   final bool paraEnviar;
 
@@ -15,13 +17,24 @@ class RevisionPautaScreen extends StatefulWidget {
   });
 
   @override
-  State<RevisionPautaScreen> createState() => _RevisionPautaScreenState();
+  Widget build(BuildContext context) => ChangeNotifierProvider(
+    create: (_) => TreatmentReviewViewModel(analise),
+    child: _RevisionPautaView(paraEnviar: paraEnviar),
+  );
 }
 
-class _RevisionPautaScreenState extends State<RevisionPautaScreen> {
-  late AnaliseModel _analise;
-  late AnaliseModel _ultimaRevisionConfirmada;
-  bool _editando = false;
+class _RevisionPautaView extends StatefulWidget {
+  final bool paraEnviar;
+  const _RevisionPautaView({required this.paraEnviar});
+
+  @override
+  State<_RevisionPautaView> createState() => _RevisionPautaViewState();
+}
+
+class _RevisionPautaViewState extends State<_RevisionPautaView> {
+  TreatmentReviewViewModel get _vm => context.read<TreatmentReviewViewModel>();
+  AnaliseModel get _analise => _vm.analise;
+  bool get _editando => _vm.editando;
 
   static const _azul = Colors.blue;
   static const _verde = Color(0xFF268F5A);
@@ -29,39 +42,35 @@ class _RevisionPautaScreenState extends State<RevisionPautaScreen> {
   static const _escuro = Color(0xFF333333);
 
   @override
-  void initState() {
-    super.initState();
-    _analise = RevisionPauta.ordenar(widget.analise);
-    _ultimaRevisionConfirmada = _analise;
-  }
-
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: _fondo,
-    appBar: AppBar(
+  Widget build(BuildContext context) {
+    context.watch<TreatmentReviewViewModel>();
+    return Scaffold(
       backgroundColor: _fondo,
-      title: Text(
-        _editando ? 'Corrixir a pauta' : 'Revisar o informe',
-        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+      appBar: AppBar(
+        backgroundColor: _fondo,
+        title: Text(
+          _editando ? 'Corrixir a pauta' : 'Revisar o informe',
+          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        ),
       ),
-    ),
-    body: SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
-        children: [
-          _cabecera(),
-          const SizedBox(height: 16),
-          _datosXerais(),
-          const SizedBox(height: 16),
-          _tarxetaPauta(),
-          const SizedBox(height: 16),
-          _proximaVisita(),
-          const SizedBox(height: 18),
-          _accions(),
-        ],
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+          children: [
+            _cabecera(),
+            const SizedBox(height: 16),
+            _datosXerais(),
+            const SizedBox(height: 16),
+            _tarxetaPauta(),
+            const SizedBox(height: 16),
+            _proximaVisita(),
+            const SizedBox(height: 18),
+            _accions(),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 
   Widget _cabecera() => Container(
     padding: const EdgeInsets.all(20),
@@ -376,13 +385,8 @@ class _RevisionPautaScreenState extends State<RevisionPautaScreen> {
                       Switch(
                         value: dia.eControl,
                         activeThumbColor: _verde,
-                        onChanged: (valor) => setState(() {
-                          _analise = RevisionPauta.actualizarDia(
-                            _analise,
-                            indice,
-                            eControl: valor,
-                          );
-                        }),
+                        onChanged: (valor) =>
+                            _vm.actualizarDia(indice, eControl: valor),
                       ),
                     ],
                   ),
@@ -486,10 +490,7 @@ class _RevisionPautaScreenState extends State<RevisionPautaScreen> {
           ),
           const SizedBox(height: 10),
           TextButton(
-            onPressed: () => setState(() {
-              _analise = _ultimaRevisionConfirmada;
-              _editando = false;
-            }),
+            onPressed: _vm.cancelarCambios,
             child: const Text(
               'Cancelar os cambios',
               style: TextStyle(fontSize: 16),
@@ -528,10 +529,7 @@ class _RevisionPautaScreenState extends State<RevisionPautaScreen> {
           ),
           const SizedBox(height: 10),
           OutlinedButton.icon(
-            onPressed: () => setState(() {
-              _ultimaRevisionConfirmada = _analise;
-              _editando = true;
-            }),
+            onPressed: _vm.iniciarEdicion,
             icon: const Icon(Icons.edit_outlined),
             label: const Text('Non, corrixir datos'),
             style: OutlinedButton.styleFrom(
@@ -561,10 +559,7 @@ class _RevisionPautaScreenState extends State<RevisionPautaScreen> {
   );
 
   void _eliminarDia(int indice) {
-    final eliminado = _analise.calendario[indice];
-    setState(() {
-      _analise = RevisionPauta.eliminarDia(_analise, indice);
-    });
+    final eliminado = _vm.eliminarDia(indice);
 
     final mensaxeiro = ScaffoldMessenger.of(context);
     mensaxeiro
@@ -574,14 +569,7 @@ class _RevisionPautaScreenState extends State<RevisionPautaScreen> {
           content: const Text('Eliminouse a fila da pauta.'),
           action: SnackBarAction(
             label: 'Desfacer',
-            onPressed: () => setState(() {
-              final posicion = indice.clamp(0, _analise.calendario.length);
-              _analise = RevisionPauta.inserirDia(
-                _analise,
-                posicion,
-                eliminado,
-              );
-            }),
+            onPressed: () => _vm.desfacerEliminacion(indice, eliminado),
           ),
         ),
       );
@@ -618,10 +606,7 @@ class _RevisionPautaScreenState extends State<RevisionPautaScreen> {
       confirmText: 'Aceptar',
     );
     if (nova == null || !mounted) return;
-    setState(
-      () =>
-          _analise = RevisionPauta.actualizarDia(_analise, indice, data: nova),
-    );
+    _vm.actualizarDia(indice, data: nova);
   }
 
   Future<void> _escollerProximaVisita() async {
@@ -642,9 +627,7 @@ class _RevisionPautaScreenState extends State<RevisionPautaScreen> {
       confirmText: 'Aceptar',
     );
     if (nova == null || !mounted) return;
-    setState(
-      () => _analise = RevisionPauta.actualizarProximaVisita(_analise, nova),
-    );
+    _vm.actualizarProximaVisita(nova);
   }
 
   Future<void> _escollerDose(int indice) async {
@@ -718,35 +701,20 @@ class _RevisionPautaScreenState extends State<RevisionPautaScreen> {
     );
     controlador.dispose();
     if (novaDose == null || !mounted) return;
-    setState(
-      () => _analise = RevisionPauta.actualizarDia(
-        _analise,
-        indice,
-        dose: novaDose,
-      ),
-    );
+    _vm.actualizarDia(indice, dose: novaDose);
   }
 
   void _revisarCorreccions() {
-    final erros = RevisionPauta.validar(_analise);
-    if (erros.isNotEmpty) {
-      _mostrarErro(erros.first);
-      return;
-    }
-    setState(() {
-      _analise = RevisionPauta.ordenar(_analise);
-      _ultimaRevisionConfirmada = _analise;
-      _editando = false;
-    });
+    if (!_vm.revisarCorreccions()) _mostrarErro(_vm.erro!);
   }
 
   void _confirmar() {
-    final erros = RevisionPauta.validar(_analise);
-    if (erros.isNotEmpty) {
-      _mostrarErro(erros.first);
+    final analise = _vm.confirmar();
+    if (analise == null) {
+      _mostrarErro(_vm.erro!);
       return;
     }
-    Navigator.pop(context, RevisionPauta.ordenar(_analise));
+    Navigator.pop(context, analise);
   }
 
   void _mostrarErro(String mensaxe) =>
