@@ -10,11 +10,14 @@ import '../servizos/servizo_notificacions_locais.dart';
 import '../servizos/servizo_sincronizacion_p2p.dart';
 
 class ReportCaptureViewModel extends ChangeNotifier {
-  final ApiService _api;
-  final DatabaseService _database;
-  final LocalNotificationService _notificacions;
-  final P2PSyncService _sincronizacion;
-  final FlutterSecureStorage _storage;
+  final Future<AnaliseModel> Function(File ficheiro) _enviarInforme;
+  final Future<void> Function(AnaliseModel analise) _gardarAnalise;
+  final Future<String?> Function(String key) _ler;
+  final Future<void> Function({required String nome, required String hora})
+  _programarTomas;
+  final Future<void> Function(String tipo) _notificarCoidador;
+  final Future<void> Function(AnaliseModel analise, String token)
+  _enviarInformeRemoto;
 
   ReportCaptureViewModel({
     ApiService? api,
@@ -22,11 +25,33 @@ class ReportCaptureViewModel extends ChangeNotifier {
     LocalNotificationService? notificacions,
     P2PSyncService? sincronizacion,
     FlutterSecureStorage storage = const FlutterSecureStorage(),
-  }) : _api = api ?? ApiService(),
-       _database = database ?? DatabaseService(),
-       _notificacions = notificacions ?? LocalNotificationService(),
-       _sincronizacion = sincronizacion ?? P2PSyncService(),
-       _storage = storage;
+  }) : this.conDependencias(
+         enviarInforme: (api ?? ApiService()).enviarInforme,
+         gardarAnalise: (database ?? DatabaseService()).gardarAnalise,
+         ler: (key) => storage.read(key: key),
+         programarTomas: (notificacions ?? LocalNotificationService())
+             .programarTomasPaciente,
+         notificarCoidador:
+             (sincronizacion ?? P2PSyncService()).notificarCoidador,
+         enviarInformeRemoto:
+             (sincronizacion ?? P2PSyncService()).enviarInformeRemoto,
+       );
+
+  ReportCaptureViewModel.conDependencias({
+    required Future<AnaliseModel> Function(File ficheiro) enviarInforme,
+    required Future<void> Function(AnaliseModel analise) gardarAnalise,
+    required Future<String?> Function(String key) ler,
+    required Future<void> Function({required String nome, required String hora})
+    programarTomas,
+    required Future<void> Function(String tipo) notificarCoidador,
+    required Future<void> Function(AnaliseModel analise, String token)
+    enviarInformeRemoto,
+  }) : _enviarInforme = enviarInforme,
+       _gardarAnalise = gardarAnalise,
+       _ler = ler,
+       _programarTomas = programarTomas,
+       _notificarCoidador = notificarCoidador,
+       _enviarInformeRemoto = enviarInformeRemoto;
 
   bool _procesando = false;
   String? _nomeFicheiro;
@@ -42,7 +67,7 @@ class ReportCaptureViewModel extends ChangeNotifier {
     _erro = null;
     notifyListeners();
     try {
-      return await _api.enviarInforme(ficheiro);
+      return await _enviarInforme(ficheiro);
     } catch (e) {
       _erro = e.toString().replaceFirst('Exception: ', '');
       return null;
@@ -61,20 +86,17 @@ class ReportCaptureViewModel extends ChangeNotifier {
     notifyListeners();
     try {
       if (tokenPacienteDestino == null) {
-        await _database.gardarAnalise(analise);
-        final hora = await _storage.read(key: 'hora_toma');
+        await _gardarAnalise(analise);
+        final hora = await _ler('hora_toma');
         if (hora != null) {
-          await _notificacions.programarTomasPaciente(
-            nome: await _storage.read(key: 'nome_usuario') ?? '',
+          await _programarTomas(
+            nome: await _ler('nome_usuario') ?? '',
             hora: hora,
           );
         }
-        await _sincronizacion.notificarCoidador('NOVO_INFORME');
+        await _notificarCoidador('NOVO_INFORME');
       } else {
-        await _sincronizacion.enviarInformeRemoto(
-          analise,
-          tokenPacienteDestino,
-        );
+        await _enviarInformeRemoto(analise, tokenPacienteDestino);
       }
       return true;
     } catch (e) {

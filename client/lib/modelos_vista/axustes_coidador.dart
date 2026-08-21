@@ -14,9 +14,21 @@ class CaregiverSettingsViewModel extends ChangeNotifier {
   CaregiverSettingsViewModel({
     DatabaseService? database,
     P2PSyncService? sincronizacion,
-  }) : _obterPacientes = (database ?? DatabaseService()).obterPacientesCoidador,
-       _desvincularPaciente =
-           (sincronizacion ?? P2PSyncService()).desvincularPaciente;
+  }) : this.conDependencias(
+         obterPacientes: (database ?? DatabaseService()).obterPacientesCoidador,
+         desvincularPaciente:
+             (sincronizacion ?? P2PSyncService()).desvincularPaciente,
+       );
+
+  CaregiverSettingsViewModel.conDependencias({
+    required Future<List<Map<String, dynamic>>> Function() obterPacientes,
+    required Future<void> Function({
+      required String uid,
+      required String tokenPaciente,
+    })
+    desvincularPaciente,
+  }) : _obterPacientes = obterPacientes,
+       _desvincularPaciente = desvincularPaciente;
 
   List<Map<String, dynamic>> _pacientes = const [];
   bool _cargando = false;

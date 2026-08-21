@@ -4,11 +4,13 @@ import 'package:qr_flutter/qr_flutter.dart';
 import '../modelos_vista/axustes_paciente.dart';
 
 class AxustesPacienteScreen extends StatelessWidget {
-  const AxustesPacienteScreen({super.key});
+  const AxustesPacienteScreen({super.key, this.viewModel});
+
+  final PatientSettingsViewModel? viewModel;
 
   @override
   Widget build(BuildContext context) => ChangeNotifierProvider(
-    create: (_) => PatientSettingsViewModel()..cargar(),
+    create: (_) => viewModel ?? (PatientSettingsViewModel()..cargar()),
     child: const _AxustesPacienteView(),
   );
 }

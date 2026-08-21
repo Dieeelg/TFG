@@ -37,40 +37,43 @@ class SetupScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: Column(
-            children: [
-              const SizedBox(height: 60),
-              const Text(
-                'Benvido',
-                style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Quen vai usar a aplicación?',
-                style: TextStyle(fontSize: 18, color: Color(0xFF34495E)),
-              ),
-              const SizedBox(height: 40),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.only(bottom: 24),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: Column(
+              children: [
+                const SizedBox(height: 60),
+                const Text(
+                  'Benvido',
+                  style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Quen vai usar a aplicación?',
+                  style: TextStyle(fontSize: 18, color: Color(0xFF34495E)),
+                ),
+                const SizedBox(height: 40),
 
-              _buildOptionCard(
-                title: 'Para min',
-                subtitle: 'Vou xestionar o meu propio tratamento.',
-                icon: Icons.person_outline,
-                estaCargando: setupVM.estaCargando,
-                onTap: () => _manexarSeleccion(context, true),
-              ),
+                _buildOptionCard(
+                  title: 'Para min',
+                  subtitle: 'Vou xestionar o meu propio tratamento.',
+                  icon: Icons.person_outline,
+                  estaCargando: setupVM.estaCargando,
+                  onTap: () => _manexarSeleccion(context, true),
+                ),
 
-              const SizedBox(height: 20),
+                const SizedBox(height: 20),
 
-              _buildOptionCard(
-                title: 'Para outra persoa',
-                subtitle: 'Vou axudar a outra persoa co seu tratamento.',
-                icon: Icons.people_outline,
-                estaCargando: setupVM.estaCargando,
-                onTap: () => _manexarSeleccion(context, false),
-              ),
-            ],
+                _buildOptionCard(
+                  title: 'Para outra persoa',
+                  subtitle: 'Vou axudar a outra persoa co seu tratamento.',
+                  icon: Icons.people_outline,
+                  estaCargando: setupVM.estaCargando,
+                  onTap: () => _manexarSeleccion(context, false),
+                ),
+              ],
+            ),
           ),
         ),
       ),

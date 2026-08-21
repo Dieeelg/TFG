@@ -3,11 +3,13 @@ import 'package:provider/provider.dart';
 import '../modelos_vista/axustes_coidador.dart';
 
 class AxustesCoidadorScreen extends StatelessWidget {
-  const AxustesCoidadorScreen({super.key});
+  const AxustesCoidadorScreen({super.key, this.viewModel});
+
+  final CaregiverSettingsViewModel? viewModel;
 
   @override
   Widget build(BuildContext context) => ChangeNotifierProvider(
-    create: (_) => CaregiverSettingsViewModel()..cargar(),
+    create: (_) => viewModel ?? (CaregiverSettingsViewModel()..cargar()),
     child: const _AxustesCoidadorView(),
   );
 }
