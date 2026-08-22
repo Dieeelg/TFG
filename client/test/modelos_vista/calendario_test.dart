@@ -55,4 +55,46 @@ void main() {
     expect(vm.cargando, isFalse);
     expect(vm.erro, 'Non se puido cargar o calendario');
   });
+
+  test('interpreta citas ISO, hoxe, pasadas e non válidas', () async {
+    Future<CalendarViewModel> conCita(String? cita) async {
+      final vm = CalendarViewModel.conDependencias(
+        pecharTomasVencidas: () async {},
+        obterPauta: () async => [],
+        obterEstados: () async => {},
+        obterCabeceira: () async => CabeceiraModel(proximaVisita: cita),
+        agora: () => DateTime(2026, 8, 20, 18),
+      );
+      await vm.cargar();
+      return vm;
+    }
+
+    expect((await conCita('2026-08-20')).diasAtaCita, 0);
+    expect((await conCita('19/08/2026')).diasAtaCita, -1);
+    expect((await conCita('texto')).diasAtaCita, isNull);
+    expect((await conCita(null)).diasAtaCita, isNull);
+  });
+
+  test(
+    'non conta controis, dose cero nin días futuros como esquecidos',
+    () async {
+      final vm = CalendarViewModel.conDependencias(
+        pecharTomasVencidas: () async {},
+        obterPauta: () async => [
+          dia('2026-08-19', dose: '0'),
+          dia('2026-08-19', control: true, dose: null),
+          dia('2026-08-21'),
+        ],
+        obterEstados: () async => {},
+        obterCabeceira: () async => null,
+        agora: () => DateTime(2026, 8, 20),
+      );
+      await vm.cargar();
+
+      expect(vm.tomadas, 0);
+      expect(vm.esquecidas, 0);
+      expect(vm.cumprimento, 0);
+      expect(vm.estadoDe('descoñecido'), isNull);
+    },
+  );
 }

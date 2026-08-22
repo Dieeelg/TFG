@@ -13,12 +13,24 @@ class SupervisedPatientViewModel extends ChangeNotifier {
 
   SupervisedPatientViewModel({
     required Map<String, dynamic> paciente,
-    required this.numero,
+    required int numero,
     DatabaseService? database,
     P2PSyncService? sincronizacion,
+  }) : this.conDependencias(
+         paciente: paciente,
+         numero: numero,
+         obterPacientes: (database ?? DatabaseService()).obterPacientesCoidador,
+         actualizacions: (sincronizacion ?? P2PSyncService()).actualizacions,
+       );
+
+  SupervisedPatientViewModel.conDependencias({
+    required Map<String, dynamic> paciente,
+    required this.numero,
+    required Future<List<Map<String, dynamic>>> Function() obterPacientes,
+    required Stream<String> actualizacions,
   }) : _paciente = paciente,
-       _obterPacientes = (database ?? DatabaseService()).obterPacientesCoidador,
-       _actualizacions = (sincronizacion ?? P2PSyncService()).actualizacions;
+       _obterPacientes = obterPacientes,
+       _actualizacions = actualizacions;
 
   Map<String, dynamic> _paciente;
   String? _erro;

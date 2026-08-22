@@ -10,12 +10,21 @@ import '../servizos/servizo_sincronizacion_p2p.dart';
 export '../servizos/servizo_cifrado_p2p.dart' show VinculacionP2P;
 
 class PatientSettingsViewModel extends ChangeNotifier {
-  final FlutterSecureStorage _storage;
-  final ServizoCifradoP2P _cifrado;
-  final LocalNotificationService _notificacions;
-  final P2PSyncService _sincronizacion;
+  final Future<String?> Function(String key) _ler;
+  final Future<void> Function(String key, String value) _escribir;
+  final Future<void> Function(String key) _eliminar;
+  final Future<List<VinculacionP2P>> Function() _obterSupervisores;
+  final Future<void> Function({required String nome, required String hora})
+  _programarTomas;
+  final Future<void> Function(String tipo) _notificarCoidador;
+  final Future<void> Function(VinculacionP2P vinculacion) _desvincularCoidador;
   final Future<String?> Function() _obterUid;
   final Future<String?> Function() _obterToken;
+  final Future<String> Function({
+    required String uidPaciente,
+    required String tokenPaciente,
+  })
+  _xerarCodigoVinculacion;
 
   PatientSettingsViewModel({
     FlutterSecureStorage storage = const FlutterSecureStorage(),
@@ -24,13 +33,53 @@ class PatientSettingsViewModel extends ChangeNotifier {
     P2PSyncService? sincronizacion,
     Future<String?> Function()? obterUid,
     Future<String?> Function()? obterToken,
-  }) : _storage = storage,
-       _cifrado = cifrado ?? ServizoCifradoP2P(),
-       _notificacions = notificacions ?? LocalNotificationService(),
-       _sincronizacion = sincronizacion ?? P2PSyncService(),
-       _obterUid =
-           obterUid ?? (() async => FirebaseAuth.instance.currentUser?.uid),
-       _obterToken = obterToken ?? FirebaseMessaging.instance.getToken;
+  }) : this.conDependencias(
+         ler: (key) => storage.read(key: key),
+         escribir: (key, value) => storage.write(key: key, value: value),
+         eliminar: (key) => storage.delete(key: key),
+         obterSupervisores: () =>
+             (cifrado ?? ServizoCifradoP2P()).obterPorRolRemoto('COIDADOR'),
+         programarTomas: (notificacions ?? LocalNotificationService())
+             .programarTomasPaciente,
+         notificarCoidador:
+             (sincronizacion ?? P2PSyncService()).notificarCoidador,
+         desvincularCoidador:
+             (sincronizacion ?? P2PSyncService()).desvincularCoidador,
+         obterUid:
+             obterUid ?? (() async => FirebaseAuth.instance.currentUser?.uid),
+         obterToken:
+             obterToken ?? (() => FirebaseMessaging.instance.getToken()),
+         xerarCodigoVinculacion:
+             (cifrado ?? ServizoCifradoP2P()).xerarCodigoVinculacion,
+       );
+
+  PatientSettingsViewModel.conDependencias({
+    required Future<String?> Function(String key) ler,
+    required Future<void> Function(String key, String value) escribir,
+    required Future<void> Function(String key) eliminar,
+    required Future<List<VinculacionP2P>> Function() obterSupervisores,
+    required Future<void> Function({required String nome, required String hora})
+    programarTomas,
+    required Future<void> Function(String tipo) notificarCoidador,
+    required Future<void> Function(VinculacionP2P vinculacion)
+    desvincularCoidador,
+    required Future<String?> Function() obterUid,
+    required Future<String?> Function() obterToken,
+    required Future<String> Function({
+      required String uidPaciente,
+      required String tokenPaciente,
+    })
+    xerarCodigoVinculacion,
+  }) : _ler = ler,
+       _escribir = escribir,
+       _eliminar = eliminar,
+       _obterSupervisores = obterSupervisores,
+       _programarTomas = programarTomas,
+       _notificarCoidador = notificarCoidador,
+       _desvincularCoidador = desvincularCoidador,
+       _obterUid = obterUid,
+       _obterToken = obterToken,
+       _xerarCodigoVinculacion = xerarCodigoVinculacion;
 
   String _nome = '';
   String _hora = '20:00';
@@ -58,10 +107,10 @@ class PatientSettingsViewModel extends ChangeNotifier {
     notifyListeners();
     try {
       final resultados = await Future.wait<Object?>([
-        _storage.read(key: 'nome_usuario'),
-        _storage.read(key: 'hora_toma'),
-        _storage.read(key: 'modo_sinxelo'),
-        _cifrado.obterPorRolRemoto('COIDADOR'),
+        _ler('nome_usuario'),
+        _ler('hora_toma'),
+        _ler('modo_sinxelo'),
+        _obterSupervisores(),
       ]);
       _nome = (resultados[0] as String?) ?? '';
       _hora = (resultados[1] as String?) ?? '20:00';
@@ -88,17 +137,14 @@ class PatientSettingsViewModel extends ChangeNotifier {
     try {
       final nomeLimpo = nome.trim();
       if (nomeLimpo.isEmpty) {
-        await _storage.delete(key: 'nome_usuario');
+        await _eliminar('nome_usuario');
       } else {
-        await _storage.write(key: 'nome_usuario', value: nomeLimpo);
+        await _escribir('nome_usuario', nomeLimpo);
       }
-      await _storage.write(key: 'hora_toma', value: hora);
-      await _storage.write(
-        key: 'modo_sinxelo',
-        value: _modoSinxelo ? 'true' : 'false',
-      );
-      await _notificacions.programarTomasPaciente(nome: nomeLimpo, hora: hora);
-      await _sincronizacion.notificarCoidador('ESTADO_COMPLETO');
+      await _escribir('hora_toma', hora);
+      await _escribir('modo_sinxelo', _modoSinxelo ? 'true' : 'false');
+      await _programarTomas(nome: nomeLimpo, hora: hora);
+      await _notificarCoidador('ESTADO_COMPLETO');
       _nome = nomeLimpo;
       _hora = hora;
       return true;
@@ -116,8 +162,8 @@ class PatientSettingsViewModel extends ChangeNotifier {
     _erro = null;
     notifyListeners();
     try {
-      await _sincronizacion.desvincularCoidador(vinculacion);
-      _supervisores = await _cifrado.obterPorRolRemoto('COIDADOR');
+      await _desvincularCoidador(vinculacion);
+      _supervisores = await _obterSupervisores();
       return true;
     } catch (e) {
       _erro = e.toString().replaceFirst('Exception: ', '');
@@ -139,7 +185,7 @@ class PatientSettingsViewModel extends ChangeNotifier {
       return null;
     }
     try {
-      return await _cifrado.xerarCodigoVinculacion(
+      return await _xerarCodigoVinculacion(
         uidPaciente: uid,
         tokenPaciente: token,
       );

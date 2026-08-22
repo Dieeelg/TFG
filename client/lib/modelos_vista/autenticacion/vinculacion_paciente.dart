@@ -9,9 +9,47 @@ class VinculacionPacienteViewModel extends ChangeNotifier {
   String? _datosQR; //A información que conterá o QR
   bool _cargando = false;
   Timer? _timer; //Para comprobar se xa se escaneou o QR ou non
-  final _storage = const FlutterSecureStorage();
-  final _cifrado = ServizoCifradoP2P();
+  final Future<String?> Function() _obterUid;
+  final Future<String?> Function() _obterToken;
+  final Future<String> Function({
+    required String uidPaciente,
+    required String tokenPaciente,
+  })
+  _xerarCodigo;
+  final Future<String?> Function(String key) _ler;
+  final bool _activarTimer;
   bool _tenCoidador = false;
+
+  VinculacionPacienteViewModel({
+    FirebaseAuth? autenticacion,
+    FirebaseMessaging? mensaxeria,
+    FlutterSecureStorage storage = const FlutterSecureStorage(),
+    ServizoCifradoP2P? cifrado,
+  }) : this.conDependencias(
+         obterUid: () async =>
+             (autenticacion ?? FirebaseAuth.instance).currentUser?.uid,
+         obterToken: () =>
+             (mensaxeria ?? FirebaseMessaging.instance).getToken(),
+         xerarCodigo: (cifrado ?? ServizoCifradoP2P()).xerarCodigoVinculacion,
+         ler: (key) => storage.read(key: key),
+         activarTimer: true,
+       );
+
+  VinculacionPacienteViewModel.conDependencias({
+    required Future<String?> Function() obterUid,
+    required Future<String?> Function() obterToken,
+    required Future<String> Function({
+      required String uidPaciente,
+      required String tokenPaciente,
+    })
+    xerarCodigo,
+    required Future<String?> Function(String key) ler,
+    bool activarTimer = false,
+  }) : _obterUid = obterUid,
+       _obterToken = obterToken,
+       _xerarCodigo = xerarCodigo,
+       _ler = ler,
+       _activarTimer = activarTimer;
 
   bool get tenCoidador => _tenCoidador;
   String? get datosQR => _datosQR;
@@ -22,22 +60,15 @@ class VinculacionPacienteViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final user =
-          FirebaseAuth.instance.currentUser; //Pedimoslle a firebase o noso UID
-      final String uid = user?.uid ?? "sen_id";
-
-      String? token = await FirebaseMessaging.instance
-          .getToken(); //Pedimos o token para enviar mensaxes
+      final String uid = await _obterUid() ?? "sen_id";
+      String? token = await _obterToken();
 
       if (token == null || token.isEmpty) {
         throw Exception('Non se puido obter o token de mensaxería');
       }
-      _datosQR = await _cifrado.xerarCodigoVinculacion(
-        uidPaciente: uid,
-        tokenPaciente: token,
-      );
+      _datosQR = await _xerarCodigo(uidPaciente: uid, tokenPaciente: token);
 
-      _iniciarChequeoAutomatico(); //Unha vez temos os datos do QR comezamos a comprobar se xa se escaneou ou non
+      if (_activarTimer) _iniciarChequeoAutomatico();
     } catch (e) {
       _datosQR = "erro_datos";
     } finally {
@@ -58,7 +89,7 @@ class VinculacionPacienteViewModel extends ChangeNotifier {
   }
 
   Future<void> comprobarEstadoVinculacion() async {
-    String? tokenCoidador = await _storage.read(key: 'token_coidador');
+    String? tokenCoidador = await _ler('token_coidador');
     if (tokenCoidador != null && !_tenCoidador) {
       _tenCoidador = true;
       notifyListeners();

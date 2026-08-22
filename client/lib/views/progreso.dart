@@ -5,11 +5,13 @@ import '../modelos_vista/progreso.dart';
 import '../compoñentes/barra_navegacion_inferior.dart';
 
 class ProgressScreen extends StatelessWidget {
-  const ProgressScreen({super.key});
+  const ProgressScreen({super.key, this.viewModel});
+
+  final ProgressViewModel? viewModel;
 
   @override
   Widget build(BuildContext context) => ChangeNotifierProvider(
-    create: (_) => ProgressViewModel()..cargar(),
+    create: (_) => viewModel ?? (ProgressViewModel()..cargar()),
     child: const _ProgressView(),
   );
 }

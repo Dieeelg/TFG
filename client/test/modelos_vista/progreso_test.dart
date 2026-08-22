@@ -32,5 +32,32 @@ void main() {
     expect(ProgressViewModel.numero('sen datos'), isNull);
     expect(ProgressViewModel.numero('1/2'), 0.5);
     expect(ProgressViewModel.numero('1+1/2 mg'), 1.5);
+    expect(ProgressViewModel.numero('1/0'), isNull);
+    expect(ProgressViewModel.numero('-2,5 mg'), -2.5);
+  });
+
+  test('sen rexistros non inventa unha desviación media', () async {
+    final vm = ProgressViewModel.conDependencias(
+      obterHistorico: () async => [],
+      obterCabeceira: () async => null,
+      obterCumprimento: () async => [],
+    );
+    await vm.cargar();
+    expect(vm.inrActual, '--');
+    expect(vm.doseActual, '--');
+    expect(vm.desviacionMedia, isNull);
+    expect(vm.valoresInr, isEmpty);
+    expect(vm.valoresDose, isEmpty);
+  });
+
+  test('expón erro e recupera o estado de carga', () async {
+    final vm = ProgressViewModel.conDependencias(
+      obterHistorico: () async => throw Exception('sqlite'),
+      obterCabeceira: () async => null,
+      obterCumprimento: () async => [],
+    );
+    await vm.cargar();
+    expect(vm.erro, 'Non se puideron cargar os datos de progreso');
+    expect(vm.cargando, isFalse);
   });
 }

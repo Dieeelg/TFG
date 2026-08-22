@@ -5,7 +5,8 @@ import '../../servizos/servizo_notificacions_locais.dart';
 import '../../servizos/servizo_sincronizacion_p2p.dart';
 
 class AdditionalSettingsViewModel extends ChangeNotifier {
-  final FlutterSecureStorage _storage;
+  final Future<void> Function(String key) _eliminar;
+  final Future<void> Function(String key, String value) _escribir;
   final Future<void> Function({required String nome, required String hora})
   _programarTomas;
   final Future<void> Function(String tipo) _notificarCoidador;
@@ -14,11 +15,25 @@ class AdditionalSettingsViewModel extends ChangeNotifier {
     FlutterSecureStorage storage = const FlutterSecureStorage(),
     LocalNotificationService? notificacions,
     P2PSyncService? sincronizacion,
-  }) : _storage = storage,
-       _programarTomas =
-           (notificacions ?? LocalNotificationService()).programarTomasPaciente,
-       _notificarCoidador =
-           (sincronizacion ?? P2PSyncService()).notificarCoidador;
+  }) : this.conDependencias(
+         eliminar: (key) => storage.delete(key: key),
+         escribir: (key, value) => storage.write(key: key, value: value),
+         programarTomas: (notificacions ?? LocalNotificationService())
+             .programarTomasPaciente,
+         notificarCoidador:
+             (sincronizacion ?? P2PSyncService()).notificarCoidador,
+       );
+
+  AdditionalSettingsViewModel.conDependencias({
+    required Future<void> Function(String key) eliminar,
+    required Future<void> Function(String key, String value) escribir,
+    required Future<void> Function({required String nome, required String hora})
+    programarTomas,
+    required Future<void> Function(String tipo) notificarCoidador,
+  }) : _eliminar = eliminar,
+       _escribir = escribir,
+       _programarTomas = programarTomas,
+       _notificarCoidador = notificarCoidador;
 
   bool _gardando = false;
   String? _erro;
@@ -34,12 +49,12 @@ class AdditionalSettingsViewModel extends ChangeNotifier {
     try {
       final nomeLimpo = nome.trim();
       if (nomeLimpo.isEmpty) {
-        await _storage.delete(key: 'nome_usuario');
+        await _eliminar('nome_usuario');
       } else {
-        await _storage.write(key: 'nome_usuario', value: nomeLimpo);
+        await _escribir('nome_usuario', nomeLimpo);
       }
-      await _storage.write(key: 'hora_toma', value: hora);
-      await _storage.write(key: 'configuracion_finalizada', value: 'true');
+      await _escribir('hora_toma', hora);
+      await _escribir('configuracion_finalizada', 'true');
       await _programarTomas(nome: nomeLimpo, hora: hora);
       await _notificarCoidador('ESTADO_COMPLETO');
       return true;

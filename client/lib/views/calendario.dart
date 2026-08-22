@@ -5,11 +5,13 @@ import '../modelos_vista/calendario.dart';
 import '../compoñentes/barra_navegacion_inferior.dart';
 
 class TreatmentCalendarScreen extends StatelessWidget {
-  const TreatmentCalendarScreen({super.key});
+  const TreatmentCalendarScreen({super.key, this.viewModel});
+
+  final CalendarViewModel? viewModel;
 
   @override
   Widget build(BuildContext context) => ChangeNotifierProvider(
-    create: (_) => CalendarViewModel()..cargar(),
+    create: (_) => viewModel ?? (CalendarViewModel()..cargar()),
     child: const _TreatmentCalendarView(),
   );
 }

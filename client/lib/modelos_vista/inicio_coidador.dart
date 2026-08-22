@@ -15,10 +15,22 @@ class CaregiverHomeViewModel extends ChangeNotifier {
     DatabaseService? database,
     P2PSyncService? sincronizacion,
     Future<void> Function(Duration)? agardar,
-  }) : _obterPacientes = (database ?? DatabaseService()).obterPacientesCoidador,
-       _solicitarSincronizacion =
-           (sincronizacion ?? P2PSyncService()).solicitarSincronizacion,
-       _actualizacions = (sincronizacion ?? P2PSyncService()).actualizacions,
+  }) : this.conDependencias(
+         obterPacientes: (database ?? DatabaseService()).obterPacientesCoidador,
+         solicitarSincronizacion:
+             (sincronizacion ?? P2PSyncService()).solicitarSincronizacion,
+         actualizacions: (sincronizacion ?? P2PSyncService()).actualizacions,
+         agardar: agardar,
+       );
+
+  CaregiverHomeViewModel.conDependencias({
+    required Future<List<Map<String, dynamic>>> Function() obterPacientes,
+    required Future<void> Function() solicitarSincronizacion,
+    required Stream<String> actualizacions,
+    Future<void> Function(Duration)? agardar,
+  }) : _obterPacientes = obterPacientes,
+       _solicitarSincronizacion = solicitarSincronizacion,
+       _actualizacions = actualizacions,
        _agardar = agardar ?? Future<void>.delayed;
 
   List<Map<String, dynamic>> _pacientes = const [];

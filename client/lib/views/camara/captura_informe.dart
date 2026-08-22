@@ -10,11 +10,16 @@ import 'revision_pauta.dart';
 
 class CapturaInformeScreen extends StatelessWidget {
   final String? tokenPacienteDestino;
-  const CapturaInformeScreen({super.key, this.tokenPacienteDestino});
+  final ReportCaptureViewModel? viewModel;
+  const CapturaInformeScreen({
+    super.key,
+    this.tokenPacienteDestino,
+    this.viewModel,
+  });
 
   @override
   Widget build(BuildContext context) => ChangeNotifierProvider(
-    create: (_) => ReportCaptureViewModel(),
+    create: (_) => viewModel ?? ReportCaptureViewModel(),
     child: _CapturaInformeView(tokenPacienteDestino: tokenPacienteDestino),
   );
 }

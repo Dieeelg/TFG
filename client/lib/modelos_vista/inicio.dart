@@ -5,12 +5,102 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../modelos/pauta_toma.dart';
 import '../modelos/analise.dart';
 import '../modelos/cabeceira.dart';
+import '../modelos/dose_dia.dart';
 import '../servizos/servizo_api.dart';
 import '../servizos/servizo_base_datos.dart';
 import '../servizos/servizo_sincronizacion_p2p.dart';
 import '../servizos/servizo_notificacions_locais.dart';
 
 class HomeViewModel extends ChangeNotifier {
+  final Future<String?> Function(String key) _ler;
+  final Future<List<String>> Function() _pecharTomasVencidas;
+  final Future<List<DoseDiaModel>> Function() _obterPauta;
+  final Future<Map<String, String>> Function() _obterEstados;
+  final Future<CabeceiraModel?> Function() _obterCabeceira;
+  final Future<void> Function({
+    required String data,
+    required DateTime instante,
+    required int desviacionMinutos,
+    required bool foraDeHora,
+  })
+  _rexistrarToma;
+  final Future<void> Function(String tipo) _notificarCoidador;
+  final Future<void> Function({required String identificador})
+  _cancelarEsquecemento;
+  final Future<bool> Function({
+    required String tokenDestino,
+    required String payload,
+    required String tipoAviso,
+  })
+  _enviarPayload;
+  final Future<Map<String, dynamic>> Function(String centro) _buscarCentro;
+  final Stream<String> _actualizacions;
+  final DateTime Function() _agora;
+
+  HomeViewModel({
+    FlutterSecureStorage storage = const FlutterSecureStorage(),
+    DatabaseService? database,
+    P2PSyncService? sincronizacion,
+    LocalNotificationService? notificacions,
+    ApiService? api,
+    DateTime Function()? agora,
+  }) : this.conDependencias(
+         ler: (key) => storage.read(key: key),
+         pecharTomasVencidas:
+             (database ?? DatabaseService()).pecharTomasVencidas,
+         obterPauta: (database ?? DatabaseService()).obterPauta,
+         obterEstados: (database ?? DatabaseService()).obterEstados,
+         obterCabeceira: (database ?? DatabaseService()).obterCabeceira,
+         rexistrarToma: (database ?? DatabaseService()).rexistrarToma,
+         notificarCoidador:
+             (sincronizacion ?? P2PSyncService()).notificarCoidador,
+         cancelarEsquecemento: (notificacions ?? LocalNotificationService())
+             .cancelarEsquecementoHoxe,
+         enviarPayload:
+             (sincronizacion ?? P2PSyncService()).enviarPayloadParaToken,
+         buscarCentro: (api ?? ApiService()).buscarCentro,
+         actualizacions: (sincronizacion ?? P2PSyncService()).actualizacions,
+         agora: agora,
+       );
+
+  HomeViewModel.conDependencias({
+    required Future<String?> Function(String key) ler,
+    required Future<List<String>> Function() pecharTomasVencidas,
+    required Future<List<DoseDiaModel>> Function() obterPauta,
+    required Future<Map<String, String>> Function() obterEstados,
+    required Future<CabeceiraModel?> Function() obterCabeceira,
+    required Future<void> Function({
+      required String data,
+      required DateTime instante,
+      required int desviacionMinutos,
+      required bool foraDeHora,
+    })
+    rexistrarToma,
+    required Future<void> Function(String tipo) notificarCoidador,
+    required Future<void> Function({required String identificador})
+    cancelarEsquecemento,
+    required Future<bool> Function({
+      required String tokenDestino,
+      required String payload,
+      required String tipoAviso,
+    })
+    enviarPayload,
+    required Future<Map<String, dynamic>> Function(String centro) buscarCentro,
+    required Stream<String> actualizacions,
+    DateTime Function()? agora,
+  }) : _ler = ler,
+       _pecharTomasVencidas = pecharTomasVencidas,
+       _obterPauta = obterPauta,
+       _obterEstados = obterEstados,
+       _obterCabeceira = obterCabeceira,
+       _rexistrarToma = rexistrarToma,
+       _notificarCoidador = notificarCoidador,
+       _cancelarEsquecemento = cancelarEsquecemento,
+       _enviarPayload = enviarPayload,
+       _buscarCentro = buscarCentro,
+       _actualizacions = actualizacions,
+       _agora = agora ?? DateTime.now;
+
   bool _cargando = false;
   bool _preferenciasCargadas = false;
   bool _modoSinxelo = false;
@@ -30,7 +120,7 @@ class HomeViewModel extends ChangeNotifier {
   CabeceiraModel? get cabeceira => _cabeceira;
   PautaToma? get tomaHoxe {
     if (pautaSemanal.isEmpty) return null;
-    final hoxe = DateTime.now().toIso8601String().substring(0, 10);
+    final hoxe = _agora().toIso8601String().substring(0, 10);
     return pautaSemanal.where((toma) => toma.data == hoxe).firstOrNull ??
         pautaSemanal.where((toma) => toma.data.compareTo(hoxe) > 0).firstOrNull;
   }
@@ -41,7 +131,7 @@ class HomeViewModel extends ChangeNotifier {
     if (_iniciado) return;
     _iniciado = true;
     _programarPecheDoDia();
-    _syncSubscription = P2PSyncService().actualizacions.listen((evento) {
+    _syncSubscription = _actualizacions.listen((evento) {
       if (evento == 'paciente_local') {
         cargarPreferencias();
         cargarDatosHome();
@@ -55,10 +145,9 @@ class HomeViewModel extends ChangeNotifier {
   }
 
   Future<void> cargarPreferencias() async {
-    const storage = FlutterSecureStorage();
-    final nome = await storage.read(key: 'nome_usuario');
-    final hora = await storage.read(key: 'hora_toma');
-    final modoSinxelo = await storage.read(key: 'modo_sinxelo') == 'true';
+    final nome = await _ler('nome_usuario');
+    final hora = await _ler('hora_toma');
+    final modoSinxelo = await _ler('modo_sinxelo') == 'true';
 
     _nomeUsuario = nome?.trim().isEmpty == true ? null : nome?.trim();
     _horaToma = hora ?? '20:00';
@@ -79,12 +168,11 @@ class HomeViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final novasTomasEsquecidas = await DatabaseService()
-          .pecharTomasVencidas();
-      final pautaBD = await DatabaseService().obterPauta();
-      final estados = await DatabaseService().obterEstados();
-      _cabeceira = await DatabaseService().obterCabeceira();
-      final hoxe = DateTime.now().toIso8601String().substring(0, 10);
+      final novasTomasEsquecidas = await _pecharTomasVencidas();
+      final pautaBD = await _obterPauta();
+      final estados = await _obterEstados();
+      _cabeceira = await _obterCabeceira();
+      final hoxe = _agora().toIso8601String().substring(0, 10);
 
       pautaSemanal = [];
       _ultimaAnalise = null;
@@ -115,7 +203,7 @@ class HomeViewModel extends ChangeNotifier {
         );
       }
       if (novasTomasEsquecidas.isNotEmpty) {
-        await P2PSyncService().notificarCoidador('TOMA_ESQUECIDA');
+        await _notificarCoidador('TOMA_ESQUECIDA');
       }
     } catch (e) {
       debugPrint("Erro ao cargar datos da BD: $e");
@@ -128,9 +216,8 @@ class HomeViewModel extends ChangeNotifier {
   Future<void> confirmarTomaHoxe() async {
     final toma = tomaHoxe;
     if (toma == null || toma.eControl || toma.dose == 'NON') return;
-    const storage = FlutterSecureStorage();
-    final agora = DateTime.now();
-    final horaConfigurada = await storage.read(key: 'hora_toma');
+    final agora = _agora();
+    final horaConfigurada = await _ler('hora_toma');
     var desviacion = 0;
     var foraDeHora = false;
     if (horaConfigurada != null) {
@@ -147,25 +234,23 @@ class HomeViewModel extends ChangeNotifier {
         foraDeHora = desviacion > 0;
       }
     }
-    await DatabaseService().rexistrarToma(
+    await _rexistrarToma(
       data: toma.data,
       instante: agora,
       desviacionMinutos: desviacion,
       foraDeHora: foraDeHora,
     );
     await cargarDatosHome();
-    await P2PSyncService().notificarCoidador('TOMA_CONFIRMADA');
+    await _notificarCoidador('TOMA_CONFIRMADA');
     final hora = horaConfigurada;
     if (hora != null) {
-      await LocalNotificationService().cancelarEsquecementoHoxe(
-        identificador: 'paciente_local',
-      );
+      await _cancelarEsquecemento(identificador: 'paciente_local');
     }
   }
 
   Future<void> confirmarToma(String tokenCoidador, String payload) async {
     // Aquí podes usar o método enviarNotificacion que xa existe en ApiService
-    bool ok = await P2PSyncService().enviarPayloadParaToken(
+    bool ok = await _enviarPayload(
       tokenDestino: tokenCoidador,
       payload: payload,
       tipoAviso: "TOMA_CONFIRMADA",
@@ -178,7 +263,7 @@ class HomeViewModel extends ChangeNotifier {
   }
 
   Future<String> buscarTelefonoCentro(String centro) async {
-    final info = await ApiService().buscarCentro(centro);
+    final info = await _buscarCentro(centro);
     final telefono = info['telefono'] as String?;
     if (telefono == null || telefono.trim().isEmpty) {
       throw Exception('O centro non ten un telÃ©fono dispoÃ±ible');
@@ -188,7 +273,7 @@ class HomeViewModel extends ChangeNotifier {
 
   void _programarPecheDoDia() {
     _pecheDiaTimer?.cancel();
-    final agora = DateTime.now();
+    final agora = _agora();
     final medianoite = DateTime(agora.year, agora.month, agora.day + 1);
     _pecheDiaTimer = Timer(
       medianoite.difference(agora) + const Duration(seconds: 1),
