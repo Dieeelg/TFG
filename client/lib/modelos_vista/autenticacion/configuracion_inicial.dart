@@ -2,13 +2,13 @@ import 'package:firebase_auth/firebase_auth.dart'; // Estado da configuración i
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-enum AuthResult { exito, erro }
+enum ResultadoAutenticacion { exito, erro }
 
-class SetupViewModel extends ChangeNotifier {
+class ConfiguracionInicialViewModel extends ChangeNotifier {
   final Future<void> Function() _iniciarSesion;
   final Future<void> Function(String rol) _gardarRol;
 
-  SetupViewModel({
+  ConfiguracionInicialViewModel({
     FirebaseAuth? autenticacion,
     FlutterSecureStorage storage = const FlutterSecureStorage(),
   }) : this.conDependencias(
@@ -18,7 +18,7 @@ class SetupViewModel extends ChangeNotifier {
          gardarRol: (rol) => storage.write(key: 'rol_usuario', value: rol),
        );
 
-  SetupViewModel.conDependencias({
+  ConfiguracionInicialViewModel.conDependencias({
     required Future<void> Function() iniciarSesion,
     required Future<void> Function(String rol) gardarRol,
   }) : _iniciarSesion = iniciarSesion,
@@ -27,19 +27,19 @@ class SetupViewModel extends ChangeNotifier {
   bool _estaCargando = false;
   bool get estaCargando => _estaCargando;
 
-  Future<AuthResult> autenticar({required bool esPaciente}) async {
-    if (_estaCargando) return AuthResult.erro;
+  Future<ResultadoAutenticacion> autenticar({required bool esPaciente}) async {
+    if (_estaCargando) return ResultadoAutenticacion.erro;
 
     _setEstado(true);
     try {
       await _iniciarSesion();
-      await _gardarRol(esPaciente ? 'PACIENTE' : 'COIDADOR');
+      await _gardarRol(esPaciente ? 'PACIENTE' : 'SUPERVISOR');
       _setEstado(false);
-      return AuthResult.exito;
+      return ResultadoAutenticacion.exito;
     } catch (e) {
       _setEstado(false);
-      debugPrint("Erro en SetupViewModel: $e");
-      return AuthResult.erro;
+      debugPrint("Erro en ConfiguracionInicialViewModel: $e");
+      return ResultadoAutenticacion.erro;
     }
   }
 

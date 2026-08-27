@@ -11,13 +11,13 @@ import 'package:tfg_sintrom/modelos/historico.dart';
 import 'package:tfg_sintrom/modelos_vista/autenticacion/configuracion_adicional.dart';
 import 'package:tfg_sintrom/modelos_vista/autenticacion/configuracion_inicial.dart';
 import 'package:tfg_sintrom/modelos_vista/autenticacion/vinculacion_paciente.dart';
-import 'package:tfg_sintrom/modelos_vista/axustes_coidador.dart';
+import 'package:tfg_sintrom/modelos_vista/axustes_supervisor.dart';
 import 'package:tfg_sintrom/modelos_vista/calendario.dart';
 import 'package:tfg_sintrom/modelos_vista/captura_informe.dart';
 import 'package:tfg_sintrom/modelos_vista/progreso.dart';
 import 'package:tfg_sintrom/views/autenticacion/configuracion_adicional.dart';
 import 'package:tfg_sintrom/views/autenticacion/configuracion_inicial.dart';
-import 'package:tfg_sintrom/views/axustes_coidador.dart';
+import 'package:tfg_sintrom/views/axustes_supervisor.dart';
 import 'package:tfg_sintrom/views/calendario.dart';
 import 'package:tfg_sintrom/views/camara/captura_informe.dart';
 import 'package:tfg_sintrom/views/progreso.dart';
@@ -27,7 +27,7 @@ import '../axuda/datos_proba.dart';
 void main() {
   testWidgets('setup autentica o paciente e navega ata o QR', (tester) async {
     String? rol;
-    final setup = SetupViewModel.conDependencias(
+    final setup = ConfiguracionInicialViewModel.conDependencias(
       iniciarSesion: () async {},
       gardarRol: (valor) async => rol = valor,
     );
@@ -45,7 +45,7 @@ void main() {
           ChangeNotifierProvider.value(value: setup),
           ChangeNotifierProvider.value(value: vinculacion),
         ],
-        child: const MaterialApp(home: SetupScreen()),
+        child: const MaterialApp(home: ConfiguracionInicialScreen()),
       ),
     );
     expect(find.text('Quen vai usar a aplicación?'), findsOneWidget);
@@ -62,14 +62,14 @@ void main() {
   testWidgets('setup presenta o erro de autenticación sen navegar', (
     tester,
   ) async {
-    final setup = SetupViewModel.conDependencias(
+    final setup = ConfiguracionInicialViewModel.conDependencias(
       iniciarSesion: () async => throw Exception('firebase'),
       gardarRol: (_) async {},
     );
     await tester.pumpWidget(
       ChangeNotifierProvider.value(
         value: setup,
-        child: const MaterialApp(home: SetupScreen()),
+        child: const MaterialApp(home: ConfiguracionInicialScreen()),
       ),
     );
 
@@ -84,18 +84,20 @@ void main() {
     tester,
   ) async {
     String? gardado;
-    final vm = AdditionalSettingsViewModel.conDependencias(
+    final vm = ConfiguracionAdicionalViewModel.conDependencias(
       eliminar: (_) async {},
       escribir: (key, value) async => gardado = '$key:$value',
       programarTomas: ({required nome, required hora}) async {},
-      notificarCoidador: (_) async {},
+      notificarSupervisores: (_) async {},
     );
     await tester.pumpWidget(
       ChangeNotifierProvider.value(
         value: vm,
         child: MaterialApp(
-          home: const AdditionalSettingsScreen(),
-          routes: {'/home': (_) => const Scaffold(body: Text('Inicio listo'))},
+          home: const ConfiguracionAdicionalScreen(),
+          routes: {
+            '/paciente': (_) => const Scaffold(body: Text('Inicio listo')),
+          },
         ),
       ),
     );
@@ -112,16 +114,16 @@ void main() {
   testWidgets('configuración adicional mostra o erro e permanece na pantalla', (
     tester,
   ) async {
-    final vm = AdditionalSettingsViewModel.conDependencias(
+    final vm = ConfiguracionAdicionalViewModel.conDependencias(
       eliminar: (_) async {},
       escribir: (_, _) async => throw Exception('storage'),
       programarTomas: ({required nome, required hora}) async {},
-      notificarCoidador: (_) async {},
+      notificarSupervisores: (_) async {},
     );
     await tester.pumpWidget(
       ChangeNotifierProvider.value(
         value: vm,
-        child: const MaterialApp(home: AdditionalSettingsScreen()),
+        child: const MaterialApp(home: ConfiguracionAdicionalScreen()),
       ),
     );
 
@@ -136,7 +138,7 @@ void main() {
   testWidgets('calendario integra datos, estados, cita e cumprimento', (
     tester,
   ) async {
-    final vm = CalendarViewModel.conDependencias(
+    final vm = CalendarioViewModel.conDependencias(
       pecharTomasVencidas: () async {},
       obterPauta: () async => [
         DoseDiaModel(
@@ -165,9 +167,7 @@ void main() {
     );
     await vm.cargar();
 
-    await tester.pumpWidget(
-      MaterialApp(home: TreatmentCalendarScreen(viewModel: vm)),
-    );
+    await tester.pumpWidget(MaterialApp(home: CalendarioScreen(viewModel: vm)));
     await tester.pumpAndSettle();
 
     expect(find.text('O meu calendario'), findsOneWidget);
@@ -184,7 +184,7 @@ void main() {
   testWidgets('progreso integra histórico, métricas e formatos horarios', (
     tester,
   ) async {
-    final vm = ProgressViewModel.conDependencias(
+    final vm = ProgresoViewModel.conDependencias(
       obterHistorico: () async => [
         ItemHistoricoModel(inr: '2,2', dose: '6 mg'),
       ],
@@ -201,7 +201,7 @@ void main() {
     );
     await vm.cargar();
 
-    await tester.pumpWidget(MaterialApp(home: ProgressScreen(viewModel: vm)));
+    await tester.pumpWidget(MaterialApp(home: ProgresoScreen(viewModel: vm)));
     await tester.pumpAndSettle();
 
     expect(find.text('O meu progreso'), findsOneWidget);
@@ -211,11 +211,11 @@ void main() {
     expect(find.text('20:15  ·  +15 min'), findsOneWidget);
   });
 
-  testWidgets('axustes do coidador confirma e elimina un paciente', (
+  testWidgets('axustes do supervisor confirma e elimina un paciente', (
     tester,
   ) async {
     var pacientes = [crearPacienteProba(nome: 'Ana')];
-    final vm = CaregiverSettingsViewModel.conDependencias(
+    final vm = AxustesSupervisorViewModel.conDependencias(
       obterPacientes: () async => pacientes,
       desvincularPaciente: ({required uid, required tokenPaciente}) async {
         pacientes = [];
@@ -224,7 +224,7 @@ void main() {
     await vm.cargar();
 
     await tester.pumpWidget(
-      MaterialApp(home: AxustesCoidadorScreen(viewModel: vm)),
+      MaterialApp(home: AxustesSupervisorScreen(viewModel: vm)),
     );
     await tester.pumpAndSettle();
     expect(find.text('Ana'), findsOneWidget);
@@ -242,12 +242,12 @@ void main() {
     tester,
   ) async {
     final espera = Completer<AnaliseModel>();
-    final vm = ReportCaptureViewModel.conDependencias(
+    final vm = CapturaInformeViewModel.conDependencias(
       enviarInforme: (_) async => await espera.future,
       gardarAnalise: (_) async {},
       ler: (_) async => null,
       programarTomas: ({required nome, required hora}) async {},
-      notificarCoidador: (_) async {},
+      notificarSupervisores: (_) async {},
       enviarInformeRemoto: (_, _) async {},
     );
 

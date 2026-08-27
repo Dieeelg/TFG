@@ -10,7 +10,7 @@ import 'revision_pauta.dart';
 
 class CapturaInformeScreen extends StatelessWidget {
   final String? tokenPacienteDestino;
-  final ReportCaptureViewModel? viewModel;
+  final CapturaInformeViewModel? viewModel;
   const CapturaInformeScreen({
     super.key,
     this.tokenPacienteDestino,
@@ -19,7 +19,7 @@ class CapturaInformeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ChangeNotifierProvider(
-    create: (_) => viewModel ?? ReportCaptureViewModel(),
+    create: (_) => viewModel ?? CapturaInformeViewModel(),
     child: _CapturaInformeView(tokenPacienteDestino: tokenPacienteDestino),
   );
 }
@@ -58,7 +58,7 @@ class _CapturaInformeViewState extends State<_CapturaInformeView> {
   }
 
   Future<void> _procesarFicheiro(File ficheiro, String nome) async {
-    final vm = context.read<ReportCaptureViewModel>();
+    final vm = context.read<CapturaInformeViewModel>();
     final analiseExtraida = await vm.extraer(ficheiro, nome);
     if (!mounted) return;
     if (analiseExtraida != null) {
@@ -110,7 +110,7 @@ class _CapturaInformeViewState extends State<_CapturaInformeView> {
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<ReportCaptureViewModel>();
+    final vm = context.watch<CapturaInformeViewModel>();
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
@@ -225,7 +225,7 @@ class _CapturaInformeViewState extends State<_CapturaInformeView> {
         ),
       ),
       bottomNavigationBar: widget.tokenPacienteDestino == null
-          ? const AppBottomNav(currentIndex: 2)
+          ? const BarraNavegacionInferior(currentIndex: 2)
           : null,
     );
   }

@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../servizos/servizo_sincronizacion_p2p.dart';
 
-class CaregiverPatientSettingsViewModel extends ChangeNotifier {
+class ConfiguracionPacienteSupervisadoViewModel extends ChangeNotifier {
   final Future<void> Function({
     required String tokenPaciente,
     required String nome,
@@ -10,13 +10,14 @@ class CaregiverPatientSettingsViewModel extends ChangeNotifier {
   })
   _enviarConfiguracion;
 
-  CaregiverPatientSettingsViewModel({P2PSyncService? sincronizacion})
-    : this.conDependencias(
-        enviarConfiguracion:
-            (sincronizacion ?? P2PSyncService()).enviarConfiguracionPaciente,
-      );
+  ConfiguracionPacienteSupervisadoViewModel({
+    ServizoSincronizacionP2P? sincronizacion,
+  }) : this.conDependencias(
+         enviarConfiguracion: (sincronizacion ?? ServizoSincronizacionP2P())
+             .enviarConfiguracionPaciente,
+       );
 
-  CaregiverPatientSettingsViewModel.conDependencias({
+  ConfiguracionPacienteSupervisadoViewModel.conDependencias({
     required Future<void> Function({
       required String tokenPaciente,
       required String nome,

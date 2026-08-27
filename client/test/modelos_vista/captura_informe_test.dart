@@ -17,17 +17,17 @@ void main() {
     eventos = [];
   });
 
-  ReportCaptureViewModel crearVm({
+  CapturaInformeViewModel crearVm({
     Future<AnaliseModel> Function(File)? enviar,
     Future<void> Function(AnaliseModel)? gardar,
-  }) => ReportCaptureViewModel.conDependencias(
+  }) => CapturaInformeViewModel.conDependencias(
     enviarInforme: enviar ?? (_) async => analise,
     gardarAnalise: gardar ?? (_) async => eventos.add('gardar'),
     ler: (key) async => storage[key],
     programarTomas: ({required nome, required hora}) async {
       eventos.add('programar:$nome:$hora');
     },
-    notificarCoidador: (tipo) async => eventos.add('notificar:$tipo'),
+    notificarSupervisores: (tipo) async => eventos.add('notificar:$tipo'),
     enviarInformeRemoto: (valor, token) async {
       eventos.add('remoto:$token');
     },
@@ -52,7 +52,7 @@ void main() {
     expect(vm.erro, 'formato non admitido');
   });
 
-  test('completa o fluxo local: BD, recordatorios e coidador', () async {
+  test('completa o fluxo local: BD, recordatorios e supervisor', () async {
     final vm = crearVm();
 
     expect(await vm.completar(analise), isTrue);

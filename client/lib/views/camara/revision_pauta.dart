@@ -18,7 +18,7 @@ class RevisionPautaScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ChangeNotifierProvider(
-    create: (_) => TreatmentReviewViewModel(analise),
+    create: (_) => RevisionPautaViewModel(analise),
     child: _RevisionPautaView(paraEnviar: paraEnviar),
   );
 }
@@ -32,7 +32,7 @@ class _RevisionPautaView extends StatefulWidget {
 }
 
 class _RevisionPautaViewState extends State<_RevisionPautaView> {
-  TreatmentReviewViewModel get _vm => context.read<TreatmentReviewViewModel>();
+  RevisionPautaViewModel get _vm => context.read<RevisionPautaViewModel>();
   AnaliseModel get _analise => _vm.analise;
   bool get _editando => _vm.editando;
 
@@ -43,7 +43,7 @@ class _RevisionPautaViewState extends State<_RevisionPautaView> {
 
   @override
   Widget build(BuildContext context) {
-    context.watch<TreatmentReviewViewModel>();
+    context.watch<RevisionPautaViewModel>();
     return Scaffold(
       backgroundColor: _fondo,
       appBar: AppBar(

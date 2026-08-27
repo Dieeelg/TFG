@@ -4,24 +4,24 @@ import '../modelos/dose_dia.dart';
 import '../modelos_vista/calendario.dart';
 import '../compoñentes/barra_navegacion_inferior.dart';
 
-class TreatmentCalendarScreen extends StatelessWidget {
-  const TreatmentCalendarScreen({super.key, this.viewModel});
+class CalendarioScreen extends StatelessWidget {
+  const CalendarioScreen({super.key, this.viewModel});
 
-  final CalendarViewModel? viewModel;
+  final CalendarioViewModel? viewModel;
 
   @override
   Widget build(BuildContext context) => ChangeNotifierProvider(
-    create: (_) => viewModel ?? (CalendarViewModel()..cargar()),
-    child: const _TreatmentCalendarView(),
+    create: (_) => viewModel ?? (CalendarioViewModel()..cargar()),
+    child: const _CalendarioView(),
   );
 }
 
-class _TreatmentCalendarView extends StatelessWidget {
-  const _TreatmentCalendarView();
+class _CalendarioView extends StatelessWidget {
+  const _CalendarioView();
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<CalendarViewModel>();
+    final vm = context.watch<CalendarioViewModel>();
     final diasAtaCita = vm.diasAtaCita;
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
@@ -194,11 +194,11 @@ class _TreatmentCalendarView extends StatelessWidget {
                 ),
               ],
             ),
-      bottomNavigationBar: const AppBottomNav(currentIndex: 3),
+      bottomNavigationBar: const BarraNavegacionInferior(currentIndex: 3),
     );
   }
 
-  Widget _dia(DoseDiaModel dia, CalendarViewModel vm) {
+  Widget _dia(DoseDiaModel dia, CalendarioViewModel vm) {
     Color cor = const Color(0xFFE1E4E8);
     if (dia.dose == '0') {
       cor = const Color(0xFFFFD0C8);

@@ -1,4 +1,3 @@
-
 import 'package:sqflite/sqflite.dart'; // Persistencia local.
 import 'package:path/path.dart';
 import 'dart:convert';
@@ -7,14 +6,13 @@ import '../modelos/analise.dart';
 import '../modelos/cabeceira.dart';
 import '../modelos/historico.dart';
 
-class DatabaseService {
-
+class ServizoBaseDatos {
   // PATRÓN SINGLETON: Evita que se abran múltiples conexións á base de datos á vez. Sempre devolve a mesma instancia.
-  static final DatabaseService _instance = DatabaseService._internal();
+  static final ServizoBaseDatos _instance = ServizoBaseDatos._internal();
   static Database? _database;
 
-  DatabaseService._internal();
-  factory DatabaseService() => _instance;
+  ServizoBaseDatos._internal();
+  factory ServizoBaseDatos() => _instance;
 
   // Si la DB ya está abierta, la devuelve. Si no, la inicializa.
   Future<Database> get database async {
@@ -62,12 +60,12 @@ class DatabaseService {
       )
     ''');
     await _crearTaboaHistorico(db);
-    await _crearTaboaPacientesCoidador(db);
+    await _crearTaboaPacientesSupervisor(db);
   }
 
-  static Future<void> _crearTaboaPacientesCoidador(Database db) async {
+  static Future<void> _crearTaboaPacientesSupervisor(Database db) async {
     await db.execute('''
-      CREATE TABLE IF NOT EXISTS pacientes_coidador (
+      CREATE TABLE IF NOT EXISTS pacientes_supervisor (
         uid TEXT PRIMARY KEY,
         token TEXT NOT NULL,
         nome TEXT,
@@ -77,15 +75,20 @@ class DatabaseService {
     ''');
   }
 
-  Future<void> gardarPacienteCoidador({
+  Future<void> gardarPacienteSupervisor({
     required String uid,
     required String token,
     String? nome,
     Map<String, dynamic>? payload,
   }) async {
     final db = await database;
-    final anterior = await db.query('pacientes_coidador', where: 'uid = ?', whereArgs: [uid], limit: 1);
-    await db.insert('pacientes_coidador', {
+    final anterior = await db.query(
+      'pacientes_supervisor',
+      where: 'uid = ?',
+      whereArgs: [uid],
+      limit: 1,
+    );
+    await db.insert('pacientes_supervisor', {
       'uid': uid,
       'token': token,
       'nome': nome ?? (anterior.isEmpty ? null : anterior.first['nome']),
@@ -96,20 +99,25 @@ class DatabaseService {
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
-  Future<List<Map<String, dynamic>>> obterPacientesCoidador() async {
+  Future<List<Map<String, dynamic>>> obterPacientesSupervisor() async {
     final db = await database;
-    final rows = await db.query('pacientes_coidador', orderBy: 'actualizadoEn DESC');
+    final rows = await db.query(
+      'pacientes_supervisor',
+      orderBy: 'actualizadoEn DESC',
+    );
     return rows.map((row) {
       final resultado = Map<String, dynamic>.from(row);
       final payload = row['payload'] as String?;
-      resultado['datos'] = payload == null ? <String, dynamic>{} : jsonDecode(payload);
+      resultado['datos'] = payload == null
+          ? <String, dynamic>{}
+          : jsonDecode(payload);
       return resultado;
     }).toList();
   }
 
-  Future<void> eliminarPacienteCoidador(String uid) async {
+  Future<void> eliminarPacienteSupervisor(String uid) async {
     final db = await database;
-    await db.delete('pacientes_coidador', where: 'uid = ?', whereArgs: [uid]);
+    await db.delete('pacientes_supervisor', where: 'uid = ?', whereArgs: [uid]);
   }
 
   static Future<void> _crearTaboaHistorico(Database db) async {
@@ -130,13 +138,16 @@ class DatabaseService {
 
   String _identificadorDocumento(AnaliseModel analise) {
     String limpar(String? valor) => (valor ?? '').trim().toUpperCase();
-    final calendario = [...analise.calendario]..sort((a, b) => a.data.compareTo(b.data));
+    final calendario = [...analise.calendario]
+      ..sort((a, b) => a.data.compareTo(b.data));
     return [
       limpar(analise.cabeceira.dataInforme),
       limpar(analise.cabeceira.proximaVisita),
       limpar(analise.cabeceira.centro),
       limpar(analise.cabeceira.farmaco),
-      ...calendario.map((dia) => '${dia.data}|${limpar(dia.dose)}|${limpar(dia.accion)}'),
+      ...calendario.map(
+        (dia) => '${dia.data}|${limpar(dia.dose)}|${limpar(dia.accion)}',
+      ),
     ].join('::');
   }
 
@@ -150,10 +161,14 @@ class DatabaseService {
         where: 'id = 1',
         limit: 1,
       );
-      final eMesmaFolla = actual.isNotEmpty && actual.first['documentoId'] == documentoId;
+      final eMesmaFolla =
+          actual.isNotEmpty && actual.first['documentoId'] == documentoId;
       final rexistrosAnteriores = <String, Map<String, Object?>>{};
       if (eMesmaFolla) {
-        final filas = await txn.query('pautas', columns: ['data', 'estado', 'horaConfirmacion', 'desviacionMinutos']);
+        final filas = await txn.query(
+          'pautas',
+          columns: ['data', 'estado', 'horaConfirmacion', 'desviacionMinutos'],
+        );
         for (final fila in filas) {
           rexistrosAnteriores[fila['data'] as String] = fila;
         }
@@ -169,8 +184,10 @@ class DatabaseService {
           'eControl': dia.eControl ? 1 : 0,
           'diaSemanaTexto': dia.diaSemanaTexto,
           'estado': rexistrosAnteriores[dia.data]?['estado'] ?? 'PENDENTE',
-          'horaConfirmacion': rexistrosAnteriores[dia.data]?['horaConfirmacion'],
-          'desviacionMinutos': rexistrosAnteriores[dia.data]?['desviacionMinutos'],
+          'horaConfirmacion':
+              rexistrosAnteriores[dia.data]?['horaConfirmacion'],
+          'desviacionMinutos':
+              rexistrosAnteriores[dia.data]?['desviacionMinutos'],
         });
       }
 
@@ -188,20 +205,16 @@ class DatabaseService {
           'comentarios': visita.comentarios,
         });
       }
-      await txn.insert(
-        'analise_actual',
-        {
-          'id': 1,
-          'dataInforme': analise.cabeceira.dataInforme,
-          'proximaVisita': analise.cabeceira.proximaVisita,
-          'centro': analise.cabeceira.centro,
-          'farmaco': analise.cabeceira.farmaco,
-          'doseSemanal': analise.cabeceira.doseSemanal,
-          'documentoId': documentoId,
-          'inr': analise.cabeceira.inr,
-        },
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
+      await txn.insert('analise_actual', {
+        'id': 1,
+        'dataInforme': analise.cabeceira.dataInforme,
+        'proximaVisita': analise.cabeceira.proximaVisita,
+        'centro': analise.cabeceira.centro,
+        'farmaco': analise.cabeceira.farmaco,
+        'doseSemanal': analise.cabeceira.doseSemanal,
+        'documentoId': documentoId,
+        'inr': analise.cabeceira.inr,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
     });
   }
 
@@ -253,27 +266,38 @@ class DatabaseService {
   Future<List<ItemHistoricoModel>> obterHistorico() async {
     final db = await database;
     final rows = await db.query('historico_visitas', orderBy: 'data ASC');
-    return rows.map((row) => ItemHistoricoModel(
-      data: row['data'] as String?,
-      inr: row['inr'] as String?,
-      farmaco: row['farmaco'] as String?,
-      dose: row['dose'] as String?,
-      apttInyectable: row['apttInyectable'] as String?,
-      doseInyectable: row['doseInyectable'] as String?,
-      proximaVisita: row['proximaVisita'] as String?,
-      comentarios: row['comentarios'] as String?,
-    )).toList();
+    return rows
+        .map(
+          (row) => ItemHistoricoModel(
+            data: row['data'] as String?,
+            inr: row['inr'] as String?,
+            farmaco: row['farmaco'] as String?,
+            dose: row['dose'] as String?,
+            apttInyectable: row['apttInyectable'] as String?,
+            doseInyectable: row['doseInyectable'] as String?,
+            proximaVisita: row['proximaVisita'] as String?,
+            comentarios: row['comentarios'] as String?,
+          ),
+        )
+        .toList();
   }
 
   Future<Map<String, String>> obterEstados() async {
     final db = await database;
     final rows = await db.query('pautas', columns: ['data', 'estado']);
-    return {for (final row in rows) row['data'] as String: row['estado'] as String};
+    return {
+      for (final row in rows) row['data'] as String: row['estado'] as String,
+    };
   }
 
   Future<void> actualizarEstado(String data, String estado) async {
     final db = await database;
-    await db.update('pautas', {'estado': estado}, where: 'data = ?', whereArgs: [data]);
+    await db.update(
+      'pautas',
+      {'estado': estado},
+      where: 'data = ?',
+      whereArgs: [data],
+    );
   }
 
   Future<void> rexistrarToma({
@@ -283,11 +307,16 @@ class DatabaseService {
     required bool foraDeHora,
   }) async {
     final db = await database;
-    await db.update('pautas', {
-      'estado': foraDeHora ? 'TOMADA_FORA_HORA' : 'TOMADA',
-      'horaConfirmacion': instante.toIso8601String(),
-      'desviacionMinutos': desviacionMinutos,
-    }, where: 'data = ?', whereArgs: [data]);
+    await db.update(
+      'pautas',
+      {
+        'estado': foraDeHora ? 'TOMADA_FORA_HORA' : 'TOMADA',
+        'horaConfirmacion': instante.toIso8601String(),
+        'desviacionMinutos': desviacionMinutos,
+      },
+      where: 'data = ?',
+      whereArgs: [data],
+    );
   }
 
   Future<List<String>> pecharTomasVencidas() async {
@@ -297,7 +326,8 @@ class DatabaseService {
       final vencidas = await txn.query(
         'pautas',
         columns: ['id', 'data'],
-        where: "data < ? AND estado = 'PENDENTE' AND eControl = 0 "
+        where:
+            "data < ? AND estado = 'PENDENTE' AND eControl = 0 "
             "AND UPPER(TRIM(COALESCE(dose, ''))) "
             "NOT IN ('', '0', '0.0', '0,0', 'NON', 'CTRL')",
         whereArgs: [hoxe],

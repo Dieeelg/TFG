@@ -7,7 +7,7 @@ import '../axuda/datos_proba.dart';
 
 void main() {
   test('calcula nome, INR e dose con formatos locais', () {
-    final vm = SupervisedPatientViewModel.conDependencias(
+    final vm = PacienteSupervisadoViewModel.conDependencias(
       paciente: crearPacienteProba(nome: ' Ana '),
       numero: 2,
       obterPacientes: () async => [],
@@ -17,10 +17,10 @@ void main() {
     expect(vm.nomeVisible, 'Ana');
     expect(vm.valoresInr, [2.2, 2.5]);
     expect(vm.valoresDose, [6.5, 7]);
-    expect(SupervisedPatientViewModel.numeroDesde(null), isNull);
-    expect(SupervisedPatientViewModel.numeroDesde('sen dato'), isNull);
+    expect(PacienteSupervisadoViewModel.numeroDesde(null), isNull);
+    expect(PacienteSupervisadoViewModel.numeroDesde('sen dato'), isNull);
     expect(
-      SupervisedPatientViewModel.conDependencias(
+      PacienteSupervisadoViewModel.conDependencias(
         paciente: crearPacienteProba(nome: ' '),
         numero: 2,
         obterPacientes: () async => [],
@@ -34,7 +34,7 @@ void main() {
     final eventos = StreamController<String>();
     var nome = 'Inicial';
     var cargas = 0;
-    final vm = SupervisedPatientViewModel.conDependencias(
+    final vm = PacienteSupervisadoViewModel.conDependencias(
       paciente: crearPacienteProba(nome: nome),
       numero: 1,
       obterPacientes: () async {
@@ -45,12 +45,12 @@ void main() {
     );
     vm.iniciar();
 
-    eventos.add('coidador:outro');
+    eventos.add('supervisor:outro');
     await Future<void>.delayed(Duration.zero);
     expect(cargas, 0);
 
     nome = 'Actualizada';
-    eventos.add('coidador:paciente-1');
+    eventos.add('supervisor:paciente-1');
     await Future<void>.delayed(Duration.zero);
     expect(cargas, 1);
     expect(vm.nomeVisible, 'Actualizada');
@@ -60,7 +60,7 @@ void main() {
   });
 
   test('mantén o paciente se non aparece e expón erros', () async {
-    final vmSenResultado = SupervisedPatientViewModel.conDependencias(
+    final vmSenResultado = PacienteSupervisadoViewModel.conDependencias(
       paciente: crearPacienteProba(nome: 'Inicial'),
       numero: 1,
       obterPacientes: () async => [crearPacienteProba(uid: 'outro')],
@@ -69,7 +69,7 @@ void main() {
     await vmSenResultado.recargar();
     expect(vmSenResultado.nomeVisible, 'Inicial');
 
-    final vmErro = SupervisedPatientViewModel.conDependencias(
+    final vmErro = PacienteSupervisadoViewModel.conDependencias(
       paciente: crearPacienteProba(),
       numero: 1,
       obterPacientes: () async => throw Exception('sqlite'),

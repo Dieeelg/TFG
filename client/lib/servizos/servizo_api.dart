@@ -5,8 +5,8 @@ import 'package:http/http.dart' as http;
 import '../nucleo/constantes.dart';
 import '../modelos/analise.dart';
 
-class ApiService {
-  ApiService({http.Client? client}) : _client = client ?? http.Client();
+class ServizoApi {
+  ServizoApi({http.Client? client}) : _client = client ?? http.Client();
 
   final http.Client _client;
 
@@ -14,7 +14,7 @@ class ApiService {
   Future<Map<String, dynamic>> buscarCentro(String nome) async {
     //Formamos a URI
     final uri = Uri.parse(
-      '${AppConstants.baseUrl}${AppConstants.endpointCentro}',
+      '${ConstantesAplicacion.baseUrl}${ConstantesAplicacion.endpointCentro}',
     ).replace(queryParameters: {'nome': nome});
     final response = await _client.get(uri);
 
@@ -26,10 +26,12 @@ class ApiService {
   }
 
   //Comprobamos que a API é alcanzable
-  Future<bool> checkHealth() async {
+  Future<bool> comprobarEstado() async {
     try {
       final response = await _client.get(
-        Uri.parse('${AppConstants.baseUrl}${AppConstants.endpointHealth}'),
+        Uri.parse(
+          '${ConstantesAplicacion.baseUrl}${ConstantesAplicacion.endpointEstado}',
+        ),
       );
       return response.statusCode == 200;
     } catch (e) {
@@ -40,7 +42,7 @@ class ApiService {
   //Enviar o informa a nosa API
   Future<AnaliseModel> enviarInforme(File imageFile) async {
     final url = Uri.parse(
-      '${AppConstants.baseUrl}${AppConstants.endpointExtraccion}',
+      '${ConstantesAplicacion.baseUrl}${ConstantesAplicacion.endpointExtraccion}',
     );
 
     var request = http.MultipartRequest('POST', url);
@@ -75,7 +77,7 @@ class ApiService {
     required String tipoAviso,
   }) async {
     final url = Uri.parse(
-      '${AppConstants.baseUrl}${AppConstants.endpointEnviarNotif}',
+      '${ConstantesAplicacion.baseUrl}${ConstantesAplicacion.endpointEnviarNotif}',
     );
 
     try {
@@ -90,7 +92,7 @@ class ApiService {
       );
       return response.statusCode == 200;
     } catch (e) {
-      debugPrint("Erro en ApiService (Notificación): $e");
+      debugPrint("Erro en ServizoApi (Notificación): $e");
       return false;
     }
   }

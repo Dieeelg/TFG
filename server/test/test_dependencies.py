@@ -141,14 +141,14 @@ class TestDependenciasAPI(unittest.IsolatedAsyncioTestCase):
                 pass
         initialize_mock.assert_not_called()
 
-    def test_get_azure_client_dispoñible_e_non_dispoñible(self):
+    def test_obter_cliente_azure_dispoñible_e_non_dispoñible(self):
         cliente = MagicMock()
         request = SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace(doc_intel_client=cliente)))
-        self.assertIs(dependencies.get_azure_client(request), cliente)
+        self.assertIs(dependencies.obter_cliente_azure(request), cliente)
 
         request.app.state.doc_intel_client = None
         with self.assertRaises(HTTPException) as contexto:
-            dependencies.get_azure_client(request)
+            dependencies.obter_cliente_azure(request)
         self.assertEqual(contexto.exception.status_code, 500)
 
 

@@ -2,34 +2,34 @@ import 'package:flutter/material.dart'; // Pantalla de inicio do paciente.
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../modelos/pauta_toma.dart';
-import '../modelos_vista/inicio.dart';
+import '../modelos_vista/inicio_paciente.dart';
 import '../compoñentes/representacion_dose.dart';
 import 'camara/captura_informe.dart';
 import 'progreso.dart';
 import 'calendario.dart';
 import 'axustes_paciente.dart';
 
-class PacienteHomeScreen extends StatefulWidget {
-  const PacienteHomeScreen({super.key});
+class InicioPacienteScreen extends StatefulWidget {
+  const InicioPacienteScreen({super.key});
 
   @override
-  State<PacienteHomeScreen> createState() => _PacienteHomeScreenState();
+  State<InicioPacienteScreen> createState() => _InicioPacienteScreenState();
 }
 
-class _PacienteHomeScreenState extends State<PacienteHomeScreen>
+class _InicioPacienteScreenState extends State<InicioPacienteScreen>
     with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<HomeViewModel>().iniciar();
+      context.read<InicioPacienteViewModel>().iniciar();
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<HomeViewModel>();
+    final vm = context.watch<InicioPacienteViewModel>();
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
@@ -116,7 +116,7 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen>
                 ),
               );
               if (cambiou == true && context.mounted) {
-                await context.read<HomeViewModel>().cargarDatosHome();
+                await context.read<InicioPacienteViewModel>().cargarDatosHome();
               }
             },
             style: ElevatedButton.styleFrom(
@@ -141,9 +141,9 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen>
       children: [
         Expanded(
           child: Text(
-            context.read<HomeViewModel>().nomeUsuario == null
+            context.read<InicioPacienteViewModel>().nomeUsuario == null
                 ? 'Bo día,'
-                : 'Bo día, ${context.read<HomeViewModel>().nomeUsuario}',
+                : 'Bo día, ${context.read<InicioPacienteViewModel>().nomeUsuario}',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(fontSize: 31, fontWeight: FontWeight.bold),
@@ -168,7 +168,7 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen>
                 );
                 if (!mounted) return;
                 if (cambiou == true) {
-                  await context.read<HomeViewModel>().reactivar();
+                  await context.read<InicioPacienteViewModel>().reactivar();
                 }
               },
               icon: const Icon(Icons.settings_outlined, size: 34),
@@ -179,7 +179,10 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen>
     );
   }
 
-  Widget _buildCardProximaToma(BuildContext context, HomeViewModel vm) {
+  Widget _buildCardProximaToma(
+    BuildContext context,
+    InicioPacienteViewModel vm,
+  ) {
     final toma = vm.tomaHoxe;
     final tomada =
         toma?.estado == 'TOMADA' || toma?.estado == 'TOMADA_FORA_HORA';
@@ -224,7 +227,7 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen>
                 width: 82,
                 height: 82,
                 child: CustomPaint(
-                  painter: DoseVisual(
+                  painter: RepresentacionDose(
                     _doseNumerica(vm.doseHoxe),
                     color: tomada ? const Color(0xFF29965F) : Colors.blue,
                   ),
@@ -254,7 +257,7 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen>
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      'Ás ${context.read<HomeViewModel>().horaToma}',
+                      'Ás ${context.read<InicioPacienteViewModel>().horaToma}',
                       style: const TextStyle(
                         color: Colors.black87,
                         fontSize: 18,
@@ -294,7 +297,7 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen>
     );
   }
 
-  Widget _buildPautaSemanal(HomeViewModel vm) {
+  Widget _buildPautaSemanal(InicioPacienteViewModel vm) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -331,7 +334,7 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen>
 
   // --- TARXETA PRÓXIMO CONTROL (Axustada) ---
   Widget _buildCardProximoControl() {
-    final cabeceira = context.watch<HomeViewModel>().cabeceira;
+    final cabeceira = context.watch<InicioPacienteViewModel>().cabeceira;
     return Container(
       width: double.infinity, // Asegura que mida o mesmo que a de arriba
       padding: const EdgeInsets.all(20),
@@ -404,7 +407,7 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen>
     );
   }
 
-  Widget _buildDoseCircle(PautaToma toma) {
+  Widget _buildDoseCircle(PautaTomaModel toma) {
     final colorFondo = switch (toma.estado) {
       _ when toma.dose == 'NON' => const Color(0xFFFFD0C8),
       'TOMADA' => const Color(0xFF9BE0CA),
@@ -440,7 +443,7 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      context.read<HomeViewModel>().reactivar();
+      context.read<InicioPacienteViewModel>().reactivar();
     }
   }
 
@@ -475,7 +478,7 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen>
     );
   }
 
-  Widget _buildControlState(HomeViewModel vm) {
+  Widget _buildControlState(InicioPacienteViewModel vm) {
     final control = vm.tomaHoxe!;
     final hoxe = DateTime.now().toIso8601String().substring(0, 10);
     final eHoxe = control.data == hoxe;
@@ -562,7 +565,7 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen>
     return partes.length == 3 ? '${partes[2]}/${partes[1]}/${partes[0]}' : data;
   }
 
-  String _etiquetaDataToma(PautaToma? toma) {
+  String _etiquetaDataToma(PautaTomaModel? toma) {
     if (toma == null) return 'Non hai unha toma dispoñible';
     final hoxe = DateTime.now().toIso8601String().substring(0, 10);
     final data = _dataLexible(toma.data);
@@ -571,7 +574,7 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen>
     return 'Última toma, $data';
   }
 
-  String _tituloToma(PautaToma? toma) {
+  String _tituloToma(PautaTomaModel? toma) {
     if (toma == null) return 'Non hai tomas dispoñibles';
     final hoxe = DateTime.now().toIso8601String().substring(0, 10);
     if (toma.data == hoxe) return 'Toma de hoxe';
@@ -579,7 +582,7 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen>
     return 'Última toma rexistrada';
   }
 
-  Future<void> _pedirConfirmacionToma(HomeViewModel vm) async {
+  Future<void> _pedirConfirmacionToma(InicioPacienteViewModel vm) async {
     final toma = vm.tomaHoxe;
     if (toma == null) return;
     final farmaco = vm.cabeceira?.farmaco?.trim();
@@ -684,9 +687,9 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen>
 
   Future<void> _chamarAoCentro(String centro) async {
     try {
-      final telefono = await context.read<HomeViewModel>().buscarTelefonoCentro(
-        centro,
-      );
+      final telefono = await context
+          .read<InicioPacienteViewModel>()
+          .buscarTelefonoCentro(centro);
       final uri = Uri(scheme: 'tel', path: telefono);
       if (!await launchUrl(uri)) {
         throw Exception('Non se puido abrir o marcador do teléfono');
@@ -720,7 +723,7 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen>
         if (index == 1) {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const ProgressScreen()),
+            MaterialPageRoute(builder: (context) => const ProgresoScreen()),
           );
         }
         if (index == 2) {
@@ -732,16 +735,14 @@ class _PacienteHomeScreenState extends State<PacienteHomeScreen>
             ),
           ).then((_) {
             if (context.mounted) {
-              context.read<HomeViewModel>().cargarDatosHome();
+              context.read<InicioPacienteViewModel>().cargarDatosHome();
             }
           });
         }
         if (index == 3) {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => const TreatmentCalendarScreen(),
-            ),
+            MaterialPageRoute(builder: (context) => const CalendarioScreen()),
           );
         }
       },

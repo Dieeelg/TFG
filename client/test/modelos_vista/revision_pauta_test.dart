@@ -29,7 +29,7 @@ void main() {
   );
 
   test('ordena, edita e confirma unha pauta válida', () {
-    final vm = TreatmentReviewViewModel(analise());
+    final vm = RevisionPautaViewModel(analise());
 
     expect(vm.analise.calendario.first.data, '2026-08-21');
     vm.iniciarEdicion();
@@ -42,7 +42,7 @@ void main() {
   });
 
   test('cancelar restaura a última revisión confirmada', () {
-    final vm = TreatmentReviewViewModel(analise());
+    final vm = RevisionPautaViewModel(analise());
 
     vm.iniciarEdicion();
     vm.eliminarDia(0);
@@ -53,7 +53,7 @@ void main() {
   });
 
   test('non confirma unha pauta baleira', () {
-    final vm = TreatmentReviewViewModel(analise());
+    final vm = RevisionPautaViewModel(analise());
     vm.eliminarDia(1);
     vm.eliminarDia(0);
 

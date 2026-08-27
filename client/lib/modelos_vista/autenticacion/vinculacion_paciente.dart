@@ -18,7 +18,7 @@ class VinculacionPacienteViewModel extends ChangeNotifier {
   _xerarCodigo;
   final Future<String?> Function(String key) _ler;
   final bool _activarTimer;
-  bool _tenCoidador = false;
+  bool _tenSupervisor = false;
 
   VinculacionPacienteViewModel({
     FirebaseAuth? autenticacion,
@@ -51,7 +51,7 @@ class VinculacionPacienteViewModel extends ChangeNotifier {
        _ler = ler,
        _activarTimer = activarTimer;
 
-  bool get tenCoidador => _tenCoidador;
+  bool get tenSupervisor => _tenSupervisor;
   String? get datosQR => _datosQR;
   bool get cargando => _cargando;
 
@@ -78,20 +78,20 @@ class VinculacionPacienteViewModel extends ChangeNotifier {
   }
 
   void _iniciarChequeoAutomatico() {
-    //Miramos cada dous segundos se xa esta no storage o UID do coidador
+    //Miramos cada dous segundos se xa esta no storage o UID do supervisor
     _timer?.cancel(); // Cancelamos se houbera un previo
     _timer = Timer.periodic(const Duration(seconds: 2), (timer) async {
       await comprobarEstadoVinculacion();
-      if (_tenCoidador) {
-        timer.cancel(); // Se xa temos coidador, paramos o timer
+      if (_tenSupervisor) {
+        timer.cancel(); // Se xa temos supervisor, paramos o timer
       }
     });
   }
 
   Future<void> comprobarEstadoVinculacion() async {
-    String? tokenCoidador = await _ler('token_coidador');
-    if (tokenCoidador != null && !_tenCoidador) {
-      _tenCoidador = true;
+    String? tokenSupervisor = await _ler('token_supervisor');
+    if (tokenSupervisor != null && !_tenSupervisor) {
+      _tenSupervisor = true;
       notifyListeners();
     }
   }

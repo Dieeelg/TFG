@@ -2,21 +2,21 @@ import 'package:flutter/material.dart'; // Configuración remota do paciente.
 import 'package:provider/provider.dart';
 import '../modelos_vista/configuracion_paciente_supervisado.dart';
 
-class CaregiverPatientSettingsScreen extends StatefulWidget {
+class ConfiguracionPacienteSupervisadoScreen extends StatefulWidget {
   final String tokenPaciente;
   final String nomeInicial;
-  const CaregiverPatientSettingsScreen({
+  const ConfiguracionPacienteSupervisadoScreen({
     super.key,
     required this.tokenPaciente,
     required this.nomeInicial,
   });
   @override
-  State<CaregiverPatientSettingsScreen> createState() =>
-      _CaregiverPatientSettingsScreenState();
+  State<ConfiguracionPacienteSupervisadoScreen> createState() =>
+      _ConfiguracionPacienteSupervisadoScreenState();
 }
 
-class _CaregiverPatientSettingsScreenState
-    extends State<CaregiverPatientSettingsScreen> {
+class _ConfiguracionPacienteSupervisadoScreenState
+    extends State<ConfiguracionPacienteSupervisadoScreen> {
   late final TextEditingController _nome = TextEditingController(
     text: widget.nomeInicial,
   );
@@ -30,7 +30,7 @@ class _CaregiverPatientSettingsScreenState
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<CaregiverPatientSettingsViewModel>();
+    final vm = context.watch<ConfiguracionPacienteSupervisadoViewModel>();
     return Scaffold(
       appBar: AppBar(title: const Text('Configuración do paciente')),
       body: ListView(

@@ -3,14 +3,15 @@ import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../modelos_vista/autenticacion/vinculacion_paciente.dart';
 
-class VinculacionScreen extends StatefulWidget {
-  const VinculacionScreen({super.key});
+class VinculacionPacienteScreen extends StatefulWidget {
+  const VinculacionPacienteScreen({super.key});
 
   @override
-  State<VinculacionScreen> createState() => _VinculacionScreenState();
+  State<VinculacionPacienteScreen> createState() =>
+      _VinculacionPacienteScreenState();
 }
 
-class _VinculacionScreenState extends State<VinculacionScreen> {
+class _VinculacionPacienteScreenState extends State<VinculacionPacienteScreen> {
   @override
   void initState() {
     super.initState();
@@ -102,7 +103,7 @@ class _VinculacionScreenState extends State<VinculacionScreen> {
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: vm.tenCoidador
+                            onPressed: vm.tenSupervisor
                                 ? () {
                                     Navigator.pushReplacementNamed(
                                       context,
@@ -118,9 +119,9 @@ class _VinculacionScreenState extends State<VinculacionScreen> {
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              elevation: vm.tenCoidador ? 4 : 0,
+                              elevation: vm.tenSupervisor ? 4 : 0,
                             ),
-                            child: vm.tenCoidador
+                            child: vm.tenSupervisor
                                 ? const Text(
                                     'Continuar á App',
                                     style: TextStyle(
@@ -142,7 +143,7 @@ class _VinculacionScreenState extends State<VinculacionScreen> {
                                       const SizedBox(width: 12),
                                       Expanded(
                                         child: Text(
-                                          'Agardando polo coidador...',
+                                          'Agardando polo supervisor...',
                                           textAlign: TextAlign.center,
                                           maxLines: 2,
                                           style: TextStyle(
@@ -160,12 +161,12 @@ class _VinculacionScreenState extends State<VinculacionScreen> {
 
                         // --- BOTÓN PARA SALTAR ---
                         // Só o mostramos se aínda non se vinculou ninguén
-                        if (!vm.tenCoidador) _buildBotonSaltar(context),
+                        if (!vm.tenSupervisor) _buildBotonSaltar(context),
 
                         const SizedBox(height: 10),
 
                         // Refresco manual por se o timer non funciona
-                        if (!vm.tenCoidador)
+                        if (!vm.tenSupervisor)
                           TextButton(
                             onPressed: () => vm.comprobarEstadoVinculacion(),
                             child: Text(

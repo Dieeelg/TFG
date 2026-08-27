@@ -4,24 +4,24 @@ import 'package:provider/provider.dart';
 import '../modelos_vista/progreso.dart';
 import '../compoñentes/barra_navegacion_inferior.dart';
 
-class ProgressScreen extends StatelessWidget {
-  const ProgressScreen({super.key, this.viewModel});
+class ProgresoScreen extends StatelessWidget {
+  const ProgresoScreen({super.key, this.viewModel});
 
-  final ProgressViewModel? viewModel;
+  final ProgresoViewModel? viewModel;
 
   @override
   Widget build(BuildContext context) => ChangeNotifierProvider(
-    create: (_) => viewModel ?? (ProgressViewModel()..cargar()),
-    child: const _ProgressView(),
+    create: (_) => viewModel ?? (ProgresoViewModel()..cargar()),
+    child: const _ProgresoView(),
   );
 }
 
-class _ProgressView extends StatelessWidget {
-  const _ProgressView();
+class _ProgresoView extends StatelessWidget {
+  const _ProgresoView();
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<ProgressViewModel>();
+    final vm = context.watch<ProgresoViewModel>();
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
@@ -70,7 +70,7 @@ class _ProgressView extends StatelessWidget {
                 ),
               ],
             ),
-      bottomNavigationBar: const AppBottomNav(currentIndex: 1),
+      bottomNavigationBar: const BarraNavegacionInferior(currentIndex: 1),
     );
   }
 
@@ -93,7 +93,7 @@ class _ProgressView extends StatelessWidget {
     ],
   );
 
-  Widget _estatisticasHora(ProgressViewModel vm) {
+  Widget _estatisticasHora(ProgresoViewModel vm) {
     final rexistros = vm.rexistrosConDesviacion;
     final foraHora = vm.tomasForaDeHora;
     final media = vm.desviacionMedia;
@@ -185,7 +185,9 @@ class _ProgressView extends StatelessWidget {
             width: double.infinity,
             child: valores.isEmpty
                 ? const Center(child: Text('Non hai datos suficientes'))
-                : CustomPaint(painter: _ChartPainter(valores, barras: barras)),
+                : CustomPaint(
+                    painter: _GraficaProgresoPainter(valores, barras: barras),
+                  ),
           ),
         ],
       ),
@@ -193,10 +195,10 @@ class _ProgressView extends StatelessWidget {
   );
 }
 
-class _ChartPainter extends CustomPainter {
+class _GraficaProgresoPainter extends CustomPainter {
   final List<double> valores;
   final bool barras;
-  _ChartPainter(this.valores, {required this.barras});
+  _GraficaProgresoPainter(this.valores, {required this.barras});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -341,6 +343,6 @@ class _ChartPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _ChartPainter oldDelegate) =>
+  bool shouldRepaint(covariant _GraficaProgresoPainter oldDelegate) =>
       oldDelegate.valores != valores || oldDelegate.barras != barras;
 }

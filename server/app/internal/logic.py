@@ -55,7 +55,7 @@ def parsear_data(data_str: str) -> Optional[datetime]:
     except ValueError:
         return None
 
-def parse_dose_cell(raw_text: str, ano_base: int, mes_base: int,dt_proxima_visita: Optional[datetime] = None):
+def parsear_cela_dose(raw_text: str, ano_base: int, mes_base: int,dt_proxima_visita: Optional[datetime] = None):
     """
      Función para transformar o contido dunha cela nun dicionario ordenado.
      Args:

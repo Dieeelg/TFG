@@ -4,24 +4,24 @@ import '../modelos/cabeceira.dart';
 import '../modelos/dose_dia.dart';
 import '../servizos/servizo_base_datos.dart';
 
-class CalendarViewModel extends ChangeNotifier {
+class CalendarioViewModel extends ChangeNotifier {
   final Future<void> Function() _pecharTomasVencidas;
   final Future<List<DoseDiaModel>> Function() _obterPauta;
   final Future<Map<String, String>> Function() _obterEstados;
   final Future<CabeceiraModel?> Function() _obterCabeceira;
   final DateTime Function() _agora;
 
-  CalendarViewModel({DatabaseService? database, DateTime Function()? agora})
+  CalendarioViewModel({ServizoBaseDatos? database, DateTime Function()? agora})
     : this.conDependencias(
         pecharTomasVencidas:
-            (database ?? DatabaseService()).pecharTomasVencidas,
-        obterPauta: (database ?? DatabaseService()).obterPauta,
-        obterEstados: (database ?? DatabaseService()).obterEstados,
-        obterCabeceira: (database ?? DatabaseService()).obterCabeceira,
+            (database ?? ServizoBaseDatos()).pecharTomasVencidas,
+        obterPauta: (database ?? ServizoBaseDatos()).obterPauta,
+        obterEstados: (database ?? ServizoBaseDatos()).obterEstados,
+        obterCabeceira: (database ?? ServizoBaseDatos()).obterCabeceira,
         agora: agora,
       );
 
-  CalendarViewModel.conDependencias({
+  CalendarioViewModel.conDependencias({
     required Future<void> Function() pecharTomasVencidas,
     required Future<List<DoseDiaModel>> Function() obterPauta,
     required Future<Map<String, String>> Function() obterEstados,

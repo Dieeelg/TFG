@@ -1,4 +1,5 @@
-class ItemHistoricoModel { // Entrada do histórico clínico.
+class ItemHistoricoModel {
+  // Entrada do histórico clínico.
   final String? data;
   final String? inr;
   final String? farmaco;

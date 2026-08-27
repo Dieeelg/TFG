@@ -16,7 +16,7 @@ void main() {
 
   test('carga a pauta e calcula cumprimento excluíndo controis', () async {
     var pechouVencidas = false;
-    final vm = CalendarViewModel.conDependencias(
+    final vm = CalendarioViewModel.conDependencias(
       pecharTomasVencidas: () async => pechouVencidas = true,
       obterPauta: () async => [
         dia('2026-08-18'),
@@ -43,7 +43,7 @@ void main() {
   });
 
   test('expón un erro estable se falla a fonte de datos', () async {
-    final vm = CalendarViewModel.conDependencias(
+    final vm = CalendarioViewModel.conDependencias(
       pecharTomasVencidas: () async {},
       obterPauta: () async => throw Exception('base de datos non dispoñible'),
       obterEstados: () async => {},
@@ -57,8 +57,8 @@ void main() {
   });
 
   test('interpreta citas ISO, hoxe, pasadas e non válidas', () async {
-    Future<CalendarViewModel> conCita(String? cita) async {
-      final vm = CalendarViewModel.conDependencias(
+    Future<CalendarioViewModel> conCita(String? cita) async {
+      final vm = CalendarioViewModel.conDependencias(
         pecharTomasVencidas: () async {},
         obterPauta: () async => [],
         obterEstados: () async => {},
@@ -78,7 +78,7 @@ void main() {
   test(
     'non conta controis, dose cero nin días futuros como esquecidos',
     () async {
-      final vm = CalendarViewModel.conDependencias(
+      final vm = CalendarioViewModel.conDependencias(
         pecharTomasVencidas: () async {},
         obterPauta: () async => [
           dia('2026-08-19', dose: '0'),

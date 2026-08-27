@@ -5,11 +5,11 @@ import 'package:timezone/timezone.dart' as tz;
 import 'servizo_base_datos.dart';
 import 'planificador_recordatorios.dart';
 
-class LocalNotificationService {
-  static final LocalNotificationService _instance =
-      LocalNotificationService._internal();
-  factory LocalNotificationService() => _instance;
-  LocalNotificationService._internal();
+class ServizoNotificacionsLocais {
+  static final ServizoNotificacionsLocais _instance =
+      ServizoNotificacionsLocais._internal();
+  factory ServizoNotificacionsLocais() => _instance;
+  ServizoNotificacionsLocais._internal();
 
   final _plugin = FlutterLocalNotificationsPlugin();
   bool _inicializado = false;
@@ -73,8 +73,8 @@ class LocalNotificationService {
     required String nome,
     required String hora,
   }) async {
-    final pauta = await DatabaseService().obterPauta();
-    final estados = await DatabaseService().obterEstados();
+    final pauta = await ServizoBaseDatos().obterPauta();
+    final estados = await ServizoBaseDatos().obterEstados();
     await programarTomas(
       identificador: 'paciente_local',
       nome: nome,

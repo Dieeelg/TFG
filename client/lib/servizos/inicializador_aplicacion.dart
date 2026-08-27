@@ -19,9 +19,9 @@ class ResultadoInicializacion {
 class InicializadorAplicacion {
   InicializadorAplicacion({
     FlutterSecureStorage storage = const FlutterSecureStorage(),
-    LocalNotificationService? notificacions,
-    P2PSyncService? sincronizacion,
-    DatabaseService? database,
+    ServizoNotificacionsLocais? notificacions,
+    ServizoSincronizacionP2P? sincronizacion,
+    ServizoBaseDatos? database,
     DateTime Function()? agora,
   }) : this.conDependencias(
          inicializarFirebase: () async {
@@ -36,16 +36,17 @@ class InicializadorAplicacion {
            );
          },
          inicializarNotificacions:
-             (notificacions ?? LocalNotificationService()).inicializar,
+             (notificacions ?? ServizoNotificacionsLocais()).inicializar,
          escoitarMensaxes: (handler) {
            FirebaseMessaging.onMessage.listen(handler);
          },
-         procesarMensaxe: (sincronizacion ?? P2PSyncService()).procesarMensaxe,
+         procesarMensaxe:
+             (sincronizacion ?? ServizoSincronizacionP2P()).procesarMensaxe,
          ler: (key) => storage.read(key: key),
-         programarTomas: (notificacions ?? LocalNotificationService())
+         programarTomas: (notificacions ?? ServizoNotificacionsLocais())
              .programarTomasPaciente,
-         obterEstados: (database ?? DatabaseService()).obterEstados,
-         cancelarEsquecemento: (notificacions ?? LocalNotificationService())
+         obterEstados: (database ?? ServizoBaseDatos()).obterEstados,
+         cancelarEsquecemento: (notificacions ?? ServizoNotificacionsLocais())
              .cancelarEsquecementoHoxe,
          agora: agora,
        );

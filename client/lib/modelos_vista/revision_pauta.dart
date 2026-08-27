@@ -4,8 +4,8 @@ import '../modelos/analise.dart';
 import '../modelos/dose_dia.dart';
 import '../modelos/revision_pauta.dart';
 
-class TreatmentReviewViewModel extends ChangeNotifier {
-  TreatmentReviewViewModel(AnaliseModel analise)
+class RevisionPautaViewModel extends ChangeNotifier {
+  RevisionPautaViewModel(AnaliseModel analise)
     : _analise = RevisionPauta.ordenar(analise),
       _ultimaRevisionConfirmada = RevisionPauta.ordenar(analise);
 

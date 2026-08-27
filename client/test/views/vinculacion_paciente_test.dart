@@ -12,7 +12,7 @@ class _VinculacionPacienteFalsa extends VinculacionPacienteViewModel {
   String? get datosQR => 'vinculacion-de-proba';
 
   @override
-  bool get tenCoidador => false;
+  bool get tenSupervisor => false;
 
   @override
   Future<void> xerarDatosVinculacion() async {}
@@ -35,7 +35,7 @@ void main() {
     await tester.pumpWidget(
       ChangeNotifierProvider<VinculacionPacienteViewModel>.value(
         value: viewModel,
-        child: const MaterialApp(home: VinculacionScreen()),
+        child: const MaterialApp(home: VinculacionPacienteScreen()),
       ),
     );
     await tester.pump();

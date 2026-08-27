@@ -50,20 +50,23 @@ void main() {
     ]);
   });
 
-  test('un coidador configurado non restaura recordatorios de toma', () async {
-    storage = {
-      'configuracion_finalizada': 'true',
-      'rol_usuario': 'COIDADOR',
-      'hora_toma': '20:00',
-    };
-    final resultado = await crearInicializador().inicializar(
-      backgroundHandler: background,
-    );
+  test(
+    'un supervisor configurado non restaura recordatorios de toma',
+    () async {
+      storage = {
+        'configuracion_finalizada': 'true',
+        'rol_usuario': 'SUPERVISOR',
+        'hora_toma': '20:00',
+      };
+      final resultado = await crearInicializador().inicializar(
+        backgroundHandler: background,
+      );
 
-    expect(resultado.xaConfigurado, isTrue);
-    expect(resultado.rolUsuario, 'COIDADOR');
-    expect(eventos.where((e) => e.startsWith('programar')), isEmpty);
-  });
+      expect(resultado.xaConfigurado, isTrue);
+      expect(resultado.rolUsuario, 'SUPERVISOR');
+      expect(eventos.where((e) => e.startsWith('programar')), isEmpty);
+    },
+  );
 
   test(
     'restaura avisos do paciente e cancela o esquecemento xa tomado',

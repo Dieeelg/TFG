@@ -1,28 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../modelos_vista/inicio_coidador.dart';
-import 'autenticacion/vinculacion_coidador.dart';
+import '../modelos_vista/inicio_supervisor.dart';
+import 'autenticacion/vinculacion_supervisor.dart';
 import 'paciente_supervisado.dart';
 import 'configuracion_paciente_supervisado.dart';
-import 'axustes_coidador.dart';
+import 'axustes_supervisor.dart';
 
-class CaregiverHomeScreen extends StatelessWidget {
-  const CaregiverHomeScreen({super.key});
+class InicioSupervisorScreen extends StatelessWidget {
+  const InicioSupervisorScreen({super.key});
   @override
   Widget build(BuildContext context) => ChangeNotifierProvider(
-    create: (_) => CaregiverHomeViewModel()..iniciar(),
-    child: const _CaregiverHomeView(),
+    create: (_) => InicioSupervisorViewModel()..iniciar(),
+    child: const _InicioSupervisorView(),
   );
 }
 
-class _CaregiverHomeView extends StatefulWidget {
-  const _CaregiverHomeView();
+class _InicioSupervisorView extends StatefulWidget {
+  const _InicioSupervisorView();
 
   @override
-  State<_CaregiverHomeView> createState() => _CaregiverHomeViewState();
+  State<_InicioSupervisorView> createState() => _InicioSupervisorViewState();
 }
 
-class _CaregiverHomeViewState extends State<_CaregiverHomeView>
+class _InicioSupervisorViewState extends State<_InicioSupervisorView>
     with WidgetsBindingObserver {
   @override
   void initState() {
@@ -33,7 +33,7 @@ class _CaregiverHomeViewState extends State<_CaregiverHomeView>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      context.read<CaregiverHomeViewModel>().sincronizar();
+      context.read<InicioSupervisorViewModel>().sincronizar();
     }
   }
 
@@ -45,7 +45,7 @@ class _CaregiverHomeViewState extends State<_CaregiverHomeView>
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<CaregiverHomeViewModel>();
+    final vm = context.watch<InicioSupervisorViewModel>();
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
@@ -71,7 +71,9 @@ class _CaregiverHomeViewState extends State<_CaregiverHomeView>
             tooltip: 'Axustes',
             onPressed: () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const AxustesCoidadorScreen()),
+              MaterialPageRoute(
+                builder: (_) => const AxustesSupervisorScreen(),
+              ),
             ).then((_) => vm.cargar()),
             icon: const Icon(Icons.settings_outlined, size: 32),
           ),
@@ -109,7 +111,7 @@ class _CaregiverHomeViewState extends State<_CaregiverHomeView>
               onPressed: () => Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => const VincularCoidadorScreen(),
+                  builder: (_) => const VinculacionSupervisorScreen(),
                 ),
               ).then((_) => vm.sincronizar()),
               icon: const Icon(Icons.person_add_alt_1),
@@ -128,7 +130,7 @@ class _CaregiverHomeViewState extends State<_CaregiverHomeView>
   }
 
   Widget _tarxeta(
-    CaregiverHomeViewModel vm,
+    InicioSupervisorViewModel vm,
     Map<String, dynamic> paciente,
     int indice,
   ) {
@@ -148,7 +150,7 @@ class _CaregiverHomeViewState extends State<_CaregiverHomeView>
             await Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => CaregiverPatientSettingsScreen(
+                builder: (_) => ConfiguracionPacienteSupervisadoScreen(
                   tokenPaciente: paciente['token'] as String,
                   nomeInicial: nome ?? 'Persoa ${indice + 1}',
                 ),
@@ -159,7 +161,7 @@ class _CaregiverHomeViewState extends State<_CaregiverHomeView>
             await Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => CaregiverPatientScreen(
+                builder: (_) => PacienteSupervisadoScreen(
                   paciente: paciente,
                   numero: indice + 1,
                 ),

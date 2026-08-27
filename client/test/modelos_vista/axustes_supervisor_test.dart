@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tfg_sintrom/modelos_vista/axustes_coidador.dart';
+import 'package:tfg_sintrom/modelos_vista/axustes_supervisor.dart';
 
 void main() {
   test('carga pacientes e calcula nomes visibles', () async {
-    final vm = CaregiverSettingsViewModel.conDependencias(
+    final vm = AxustesSupervisorViewModel.conDependencias(
       obterPacientes: () async => [
         {
           'uid': '1',
@@ -28,7 +28,7 @@ void main() {
       {'uid': '1', 'token': 't1', 'datos': <String, dynamic>{}},
     ];
     String? eliminado;
-    final vm = CaregiverSettingsViewModel.conDependencias(
+    final vm = AxustesSupervisorViewModel.conDependencias(
       obterPacientes: () async => pacientes,
       desvincularPaciente: ({required uid, required tokenPaciente}) async {
         eliminado = '$uid:$tokenPaciente';
@@ -44,14 +44,14 @@ void main() {
   });
 
   test('diferencia os erros de carga e eliminación', () async {
-    final vmCarga = CaregiverSettingsViewModel.conDependencias(
+    final vmCarga = AxustesSupervisorViewModel.conDependencias(
       obterPacientes: () async => throw Exception('sqlite'),
       desvincularPaciente: ({required uid, required tokenPaciente}) async {},
     );
     await vmCarga.cargar();
     expect(vmCarga.erro, 'Non se puideron cargar os pacientes');
 
-    final vmEliminar = CaregiverSettingsViewModel.conDependencias(
+    final vmEliminar = AxustesSupervisorViewModel.conDependencias(
       obterPacientes: () async => [],
       desvincularPaciente: ({required uid, required tokenPaciente}) async {
         throw Exception('non autorizado');

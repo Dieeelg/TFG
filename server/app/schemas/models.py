@@ -31,13 +31,13 @@ class ItemHistorico(BaseModel):
     proximaVisita: Optional[str] = Field(None, description="Data da próxima visita nesa data histórica",examples=["27/03/2018"])
     comentarios: Optional[str] = Field(None, description="Comentarios do facultativo nesa data histórica",examples=["HOY NO TOME SINTROM"])
 
-class AnalisisResponse(BaseModel):
+class AnaliseResponse(BaseModel):
     cabeceira: CabeceiraResponse = Field(...,description="Datos xerais da visita actual.")
     calendario: List[DoseDia] = Field(...,description="Calendario con todas as tomas a realizar hasta o próximo control")
     historico: List[ItemHistorico] = Field(...,description="Rexistro das últimas visitas")
     metadatos: MetadatosResponse = Field(...,description="Información técnica sobre a análise do documento.")
 
-class HealthResponse(BaseModel):
+class EstadoResponse(BaseModel):
     status: str = Field(...,description="Estado actual da API" ,examples=["ok"])
     timestamp: str = Field(...,description="Data e hora actual do servizo en formato ISO" ,examples=["2026-01-31T01:08:29.331060"])
     version: str = Field(..., description="Versión actual da API", examples=["1.0.0"])

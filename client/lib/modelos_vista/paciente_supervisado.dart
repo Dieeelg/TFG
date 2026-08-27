@@ -5,25 +5,27 @@ import 'package:flutter/foundation.dart';
 import '../servizos/servizo_base_datos.dart';
 import '../servizos/servizo_sincronizacion_p2p.dart';
 
-class SupervisedPatientViewModel extends ChangeNotifier {
+class PacienteSupervisadoViewModel extends ChangeNotifier {
   final Future<List<Map<String, dynamic>>> Function() _obterPacientes;
   final Stream<String> _actualizacions;
   final int numero;
   StreamSubscription<String>? _subscricion;
 
-  SupervisedPatientViewModel({
+  PacienteSupervisadoViewModel({
     required Map<String, dynamic> paciente,
     required int numero,
-    DatabaseService? database,
-    P2PSyncService? sincronizacion,
+    ServizoBaseDatos? database,
+    ServizoSincronizacionP2P? sincronizacion,
   }) : this.conDependencias(
          paciente: paciente,
          numero: numero,
-         obterPacientes: (database ?? DatabaseService()).obterPacientesCoidador,
-         actualizacions: (sincronizacion ?? P2PSyncService()).actualizacions,
+         obterPacientes:
+             (database ?? ServizoBaseDatos()).obterPacientesSupervisor,
+         actualizacions:
+             (sincronizacion ?? ServizoSincronizacionP2P()).actualizacions,
        );
 
-  SupervisedPatientViewModel.conDependencias({
+  PacienteSupervisadoViewModel.conDependencias({
     required Map<String, dynamic> paciente,
     required this.numero,
     required Future<List<Map<String, dynamic>>> Function() obterPacientes,
@@ -51,7 +53,7 @@ class SupervisedPatientViewModel extends ChangeNotifier {
 
   void iniciar() {
     _subscricion ??= _actualizacions.listen((evento) {
-      if (evento == 'coidador:${_paciente['uid']}') recargar();
+      if (evento == 'supervisor:${_paciente['uid']}') recargar();
     });
   }
 

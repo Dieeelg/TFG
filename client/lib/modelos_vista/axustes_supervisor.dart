@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../servizos/servizo_base_datos.dart';
 import '../servizos/servizo_sincronizacion_p2p.dart';
 
-class CaregiverSettingsViewModel extends ChangeNotifier {
+class AxustesSupervisorViewModel extends ChangeNotifier {
   final Future<List<Map<String, dynamic>>> Function() _obterPacientes;
   final Future<void> Function({
     required String uid,
@@ -11,16 +11,17 @@ class CaregiverSettingsViewModel extends ChangeNotifier {
   })
   _desvincularPaciente;
 
-  CaregiverSettingsViewModel({
-    DatabaseService? database,
-    P2PSyncService? sincronizacion,
+  AxustesSupervisorViewModel({
+    ServizoBaseDatos? database,
+    ServizoSincronizacionP2P? sincronizacion,
   }) : this.conDependencias(
-         obterPacientes: (database ?? DatabaseService()).obterPacientesCoidador,
+         obterPacientes:
+             (database ?? ServizoBaseDatos()).obterPacientesSupervisor,
          desvincularPaciente:
-             (sincronizacion ?? P2PSyncService()).desvincularPaciente,
+             (sincronizacion ?? ServizoSincronizacionP2P()).desvincularPaciente,
        );
 
-  CaregiverSettingsViewModel.conDependencias({
+  AxustesSupervisorViewModel.conDependencias({
     required Future<List<Map<String, dynamic>>> Function() obterPacientes,
     required Future<void> Function({
       required String uid,

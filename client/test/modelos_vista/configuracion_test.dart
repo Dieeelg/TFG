@@ -6,16 +6,19 @@ import 'package:tfg_sintrom/modelos_vista/autenticacion/configuracion_inicial.da
 import 'package:tfg_sintrom/modelos_vista/configuracion_paciente_supervisado.dart';
 
 void main() {
-  group('SetupViewModel', () {
+  group('ConfiguracionInicialViewModel', () {
     test('autentica e garda o rol de paciente', () async {
       var autenticou = false;
       String? rol;
-      final vm = SetupViewModel.conDependencias(
+      final vm = ConfiguracionInicialViewModel.conDependencias(
         iniciarSesion: () async => autenticou = true,
         gardarRol: (valor) async => rol = valor,
       );
 
-      expect(await vm.autenticar(esPaciente: true), AuthResult.exito);
+      expect(
+        await vm.autenticar(esPaciente: true),
+        ResultadoAutenticacion.exito,
+      );
       expect(autenticou, isTrue);
       expect(rol, 'PACIENTE');
       expect(vm.estaCargando, isFalse);
@@ -23,7 +26,7 @@ void main() {
 
     test('devolve erro, notifica carga e evita envíos simultáneos', () async {
       final espera = Completer<void>();
-      final vm = SetupViewModel.conDependencias(
+      final vm = ConfiguracionInicialViewModel.conDependencias(
         iniciarSesion: () => espera.future,
         gardarRol: (_) async {},
       );
@@ -32,27 +35,30 @@ void main() {
 
       final primeira = vm.autenticar(esPaciente: false);
       expect(vm.estaCargando, isTrue);
-      expect(await vm.autenticar(esPaciente: false), AuthResult.erro);
+      expect(
+        await vm.autenticar(esPaciente: false),
+        ResultadoAutenticacion.erro,
+      );
       espera.completeError(Exception('firebase'));
-      expect(await primeira, AuthResult.erro);
+      expect(await primeira, ResultadoAutenticacion.erro);
       expect(vm.estaCargando, isFalse);
       expect(notificacions, 2);
     });
   });
 
-  group('AdditionalSettingsViewModel', () {
+  group('ConfiguracionAdicionalViewModel', () {
     test('garda datos limpos, programa e sincroniza', () async {
       final escritos = <String, String>{};
       final eliminados = <String>[];
       String? aviso;
       String? programacion;
-      final vm = AdditionalSettingsViewModel.conDependencias(
+      final vm = ConfiguracionAdicionalViewModel.conDependencias(
         eliminar: (key) async => eliminados.add(key),
         escribir: (key, value) async => escritos[key] = value,
         programarTomas: ({required nome, required hora}) async {
           programacion = '$nome@$hora';
         },
-        notificarCoidador: (tipo) async => aviso = tipo,
+        notificarSupervisores: (tipo) async => aviso = tipo,
       );
 
       expect(await vm.gardar(nome: '  Diego  ', hora: '21:30'), isTrue);
@@ -68,13 +74,13 @@ void main() {
 
     test('elimina o nome baleiro e informa de erros', () async {
       final eliminados = <String>[];
-      final vm = AdditionalSettingsViewModel.conDependencias(
+      final vm = ConfiguracionAdicionalViewModel.conDependencias(
         eliminar: (key) async => eliminados.add(key),
         escribir: (_, _) async {},
         programarTomas: ({required nome, required hora}) async {
           throw Exception('notificacións');
         },
-        notificarCoidador: (_) async {},
+        notificarSupervisores: (_) async {},
       );
 
       expect(await vm.gardar(nome: ' ', hora: '20:00'), isFalse);
@@ -84,10 +90,10 @@ void main() {
     });
   });
 
-  group('CaregiverPatientSettingsViewModel', () {
+  group('ConfiguracionPacienteSupervisadoViewModel', () {
     test('recorta o nome antes de enviar a configuración', () async {
       Map<String, String>? enviado;
-      final vm = CaregiverPatientSettingsViewModel.conDependencias(
+      final vm = ConfiguracionPacienteSupervisadoViewModel.conDependencias(
         enviarConfiguracion:
             ({required tokenPaciente, required nome, required horaToma}) async {
               enviado = {
@@ -107,7 +113,7 @@ void main() {
 
     test('bloquea duplicados e expón o erro do servizo', () async {
       final espera = Completer<void>();
-      final vm = CaregiverPatientSettingsViewModel.conDependencias(
+      final vm = ConfiguracionPacienteSupervisadoViewModel.conDependencias(
         enviarConfiguracion:
             ({required tokenPaciente, required nome, required horaToma}) =>
                 espera.future,
