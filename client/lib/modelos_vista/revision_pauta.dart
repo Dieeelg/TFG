@@ -4,8 +4,8 @@ import '../modelos/analise.dart';
 import '../modelos/dose_dia.dart';
 import '../modelos/revision_pauta.dart';
 
-class TreatmentReviewViewModel extends ChangeNotifier {
-  TreatmentReviewViewModel(AnaliseModel analise)
+class RevisionPautaViewModel extends ChangeNotifier {
+  RevisionPautaViewModel(AnaliseModel analise)
     : _analise = RevisionPauta.ordenar(analise),
       _ultimaRevisionConfirmada = RevisionPauta.ordenar(analise);
 
@@ -53,6 +53,29 @@ class TreatmentReviewViewModel extends ChangeNotifier {
     _analise = RevisionPauta.actualizarProximaVisita(_analise, data);
     _erro = null;
     notifyListeners();
+  }
+
+  bool engadirDia({
+    required DateTime data,
+    String? dose,
+    required bool eControl,
+  }) {
+    final dataIso = RevisionPauta.formatoIso(data);
+    if (_analise.calendario.any((dia) => dia.data == dataIso)) {
+      _erro = 'A data $dataIso xa existe na pauta.';
+      notifyListeners();
+      return false;
+    }
+
+    _analise = RevisionPauta.engadirDia(
+      _analise,
+      data: data,
+      dose: dose,
+      eControl: eControl,
+    );
+    _erro = null;
+    notifyListeners();
+    return true;
   }
 
   DoseDiaModel eliminarDia(int indice) {

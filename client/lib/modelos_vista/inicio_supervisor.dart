@@ -5,25 +5,27 @@ import 'package:flutter/foundation.dart';
 import '../servizos/servizo_base_datos.dart';
 import '../servizos/servizo_sincronizacion_p2p.dart';
 
-class CaregiverHomeViewModel extends ChangeNotifier {
+class InicioSupervisorViewModel extends ChangeNotifier {
   final Future<List<Map<String, dynamic>>> Function() _obterPacientes;
   final Future<void> Function() _solicitarSincronizacion;
   final Stream<String> _actualizacions;
   final Future<void> Function(Duration) _agardar;
 
-  CaregiverHomeViewModel({
-    DatabaseService? database,
-    P2PSyncService? sincronizacion,
+  InicioSupervisorViewModel({
+    ServizoBaseDatos? database,
+    ServizoSincronizacionP2P? sincronizacion,
     Future<void> Function(Duration)? agardar,
   }) : this.conDependencias(
-         obterPacientes: (database ?? DatabaseService()).obterPacientesCoidador,
-         solicitarSincronizacion:
-             (sincronizacion ?? P2PSyncService()).solicitarSincronizacion,
-         actualizacions: (sincronizacion ?? P2PSyncService()).actualizacions,
+         obterPacientes:
+             (database ?? ServizoBaseDatos()).obterPacientesSupervisor,
+         solicitarSincronizacion: (sincronizacion ?? ServizoSincronizacionP2P())
+             .solicitarSincronizacion,
+         actualizacions:
+             (sincronizacion ?? ServizoSincronizacionP2P()).actualizacions,
          agardar: agardar,
        );
 
-  CaregiverHomeViewModel.conDependencias({
+  InicioSupervisorViewModel.conDependencias({
     required Future<List<Map<String, dynamic>>> Function() obterPacientes,
     required Future<void> Function() solicitarSincronizacion,
     required Stream<String> actualizacions,
@@ -45,7 +47,7 @@ class CaregiverHomeViewModel extends ChangeNotifier {
 
   void iniciar() {
     _subscricion ??= _actualizacions.listen((evento) {
-      if (evento.startsWith('coidador:')) cargar();
+      if (evento.startsWith('supervisor:')) cargar();
     });
     cargar();
     sincronizar();

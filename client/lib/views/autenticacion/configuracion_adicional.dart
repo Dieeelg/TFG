@@ -2,15 +2,16 @@ import 'package:flutter/material.dart'; // Configuración adicional inicial.
 import 'package:provider/provider.dart';
 import '../../modelos_vista/autenticacion/configuracion_adicional.dart';
 
-class AdditionalSettingsScreen extends StatefulWidget {
-  const AdditionalSettingsScreen({super.key});
+class ConfiguracionAdicionalScreen extends StatefulWidget {
+  const ConfiguracionAdicionalScreen({super.key});
 
   @override
-  State<AdditionalSettingsScreen> createState() =>
-      _AdditionalSettingsScreenState();
+  State<ConfiguracionAdicionalScreen> createState() =>
+      _ConfiguracionAdicionalScreenState();
 }
 
-class _AdditionalSettingsScreenState extends State<AdditionalSettingsScreen> {
+class _ConfiguracionAdicionalScreenState
+    extends State<ConfiguracionAdicionalScreen> {
   final _nomeController = TextEditingController();
   TimeOfDay _hora = const TimeOfDay(hour: 20, minute: 0);
 
@@ -38,14 +39,14 @@ class _AdditionalSettingsScreenState extends State<AdditionalSettingsScreen> {
   Future<void> _continuar() async {
     final horaTexto =
         '${_hora.hour.toString().padLeft(2, '0')}:${_hora.minute.toString().padLeft(2, '0')}';
-    final vm = context.read<AdditionalSettingsViewModel>();
+    final vm = context.read<ConfiguracionAdicionalViewModel>();
     final gardado = await vm.gardar(
       nome: _nomeController.text,
       hora: horaTexto,
     );
     if (!mounted) return;
     if (gardado) {
-      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+      Navigator.pushNamedAndRemoveUntil(context, '/paciente', (route) => false);
     } else {
       ScaffoldMessenger.of(
         context,
@@ -55,7 +56,7 @@ class _AdditionalSettingsScreenState extends State<AdditionalSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<AdditionalSettingsViewModel>();
+    final vm = context.watch<ConfiguracionAdicionalViewModel>();
     final horaTexto =
         '${_hora.hour.toString().padLeft(2, '0')}:${_hora.minute.toString().padLeft(2, '0')}';
     return Scaffold(

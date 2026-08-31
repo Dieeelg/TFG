@@ -2,9 +2,9 @@ import 'package:flutter/material.dart'; // Barra de navegación principal.
 import '../views/calendario.dart';
 import '../views/progreso.dart';
 
-class AppBottomNav extends StatelessWidget {
+class BarraNavegacionInferior extends StatelessWidget {
   final int currentIndex;
-  const AppBottomNav({super.key, required this.currentIndex});
+  const BarraNavegacionInferior({super.key, required this.currentIndex});
 
   @override
   Widget build(BuildContext context) {
@@ -13,18 +13,18 @@ class AppBottomNav extends StatelessWidget {
       onTap: (index) async {
         if (index == currentIndex) return;
         if (index == 0) {
-          Navigator.popUntil(context, ModalRoute.withName('/home'));
+          Navigator.popUntil(context, ModalRoute.withName('/paciente'));
         } else if (index == 1) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (_) => const ProgressScreen()),
+            MaterialPageRoute(builder: (_) => const ProgresoScreen()),
           );
         } else if (index == 2) {
           await Navigator.pushNamed(context, '/captura');
         } else if (index == 3) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (_) => const TreatmentCalendarScreen()),
+            MaterialPageRoute(builder: (_) => const CalendarioScreen()),
           );
         }
       },

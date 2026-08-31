@@ -7,20 +7,20 @@ class TestSintromUnit(unittest.TestCase):
     Tests unitarios para as funcións de procesamento de texto,datas, calculo da confianza media ...
     """
 
-    def test_parse_dose_cell_tomar(self):
+    def test_parsear_cela_dose_tomar(self):
         """
         Comprobamos que a pesar de que a dose cambie de sitio se detecta todo correctamente
         """
         casos = ["27 MAR 1/2", "27 1/2 MAR"]
         for texto in casos:
             with self.subTest(text=texto):
-                resultado = parse_dose_cell(texto, 2026, 3)
+                resultado = parsear_cela_dose(texto, 2026, 3)
                 self.assertEqual(resultado["dose"], "1/2")
                 self.assertEqual(resultado["accion"], "TOMAR")
                 self.assertEqual(resultado["data"], "2026-03-27")
                 self.assertEqual(resultado["control"], False)
 
-    def test_parse_dose_cell_non_tomar(self):
+    def test_parsear_cela_dose_non_tomar(self):
         """
         Comprobamos que se detecta todo correctamente a pesar de que:
         * Non se detecte ou cambie de sitio a dose
@@ -31,13 +31,13 @@ class TestSintromUnit(unittest.TestCase):
                  "15 ABR NO TOMAR 0", "15 ABR NO 0 TOMAR"]
         for texto in casos:
             with self.subTest(text=texto):
-                resultado = parse_dose_cell(texto, 2026, 4)
+                resultado = parsear_cela_dose(texto, 2026, 4)
                 self.assertEqual(resultado["dose"], "0")
                 self.assertEqual(resultado["accion"], "NON TOMAR")
                 self.assertEqual(resultado["data"], "2026-04-15")
                 self.assertEqual(resultado["control"], False)
 
-    def test_parse_dose_cell_control(self):
+    def test_parsear_cela_dose_control(self):
         """
         Comprobamos que se detecta correctamente o día do control no calendario
         """
@@ -46,16 +46,16 @@ class TestSintromUnit(unittest.TestCase):
                  "MAY CONTROL 20", "MAY 20 CONTROL"]
         for texto in casos:
             with self.subTest(text=texto):
-                resultado = parse_dose_cell(texto, 2026, 5)
+                resultado = parsear_cela_dose(texto, 2026, 5)
                 self.assertEqual(resultado["dose"], None)
                 self.assertEqual(resultado["accion"], "CONTROL")
                 self.assertEqual(resultado["data"], "2026-05-20")
                 self.assertEqual(resultado["control"], True)
 
-    def test_parse_dose_cell_control_sen_mes_usa_a_proxima_visita(self):
+    def test_parsear_cela_dose_control_sen_mes_usa_a_proxima_visita(self):
         proxima_visita = datetime(2026, 5, 20)
 
-        resultado = parse_dose_cell(
+        resultado = parsear_cela_dose(
             "CONTROL ilexible",
             2026,
             5,
@@ -67,23 +67,23 @@ class TestSintromUnit(unittest.TestCase):
         self.assertIsNone(resultado["dose"])
         self.assertTrue(resultado["control"])
 
-    def test_parse_dose_cell_cambio_ano(self):
+    def test_parsear_cela_dose_cambio_ano(self):
         """
         Comprobamos que no caso de que no calendario teñamos cambio de ano, este se realice de forma correcta
         """
-        resultado = parse_dose_cell("08 ENE 1", 2025, 12)
+        resultado = parsear_cela_dose("08 ENE 1", 2025, 12)
         self.assertEqual(resultado["data"], "2026-01-08")
 
-    def test_parse_dose_cell_errores(self):
-        """Comproba que parse_dose_cell devolve None ante lixo ou datas mal formadas"""
+    def test_parsear_cela_dose_errores(self):
+        """Comproba que parsear_cela_dose devolve None ante lixo ou datas mal formadas"""
 
-        self.assertIsNone(parse_dose_cell("", 2026, 12))
-        self.assertIsNone(parse_dose_cell("HOLA MUNDO", 2026, 1))
-        self.assertIsNone(parse_dose_cell("20 LJLHSHS 1/2", 2026, 1))
-        self.assertIsNone(parse_dose_cell("ENE 1/2", 2026, 1))
-        self.assertIsNone(parse_dose_cell("30 FEB 1", 2026, 2))
-        self.assertIsNone(parse_dose_cell(None, 2026, 1))
-        self.assertIsNone(parse_dose_cell("ABR", 2026, 2))
+        self.assertIsNone(parsear_cela_dose("", 2026, 12))
+        self.assertIsNone(parsear_cela_dose("HOLA MUNDO", 2026, 1))
+        self.assertIsNone(parsear_cela_dose("20 LJLHSHS 1/2", 2026, 1))
+        self.assertIsNone(parsear_cela_dose("ENE 1/2", 2026, 1))
+        self.assertIsNone(parsear_cela_dose("30 FEB 1", 2026, 2))
+        self.assertIsNone(parsear_cela_dose(None, 2026, 1))
+        self.assertIsNone(parsear_cela_dose("ABR", 2026, 2))
 
     def test_extraer_data(self):
         """

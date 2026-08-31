@@ -19,7 +19,7 @@ void main() {
       uidRemoto: 'uid-remoto',
       tokenRemoto: 'token-remoto',
       claveBase64: clave,
-      rolRemoto: 'COIDADOR',
+      rolRemoto: 'SUPERVISOR',
     );
   });
 
@@ -129,7 +129,7 @@ void main() {
       uidRemoto: 'outro-uid',
       tokenRemoto: 'outro-token',
       claveBase64: outraClave,
-      rolRemoto: 'COIDADOR',
+      rolRemoto: 'SUPERVISOR',
     );
     await servizo.gardarVinculacion(vinculacion);
     await servizo.gardarVinculacion(outraVinculacion);
@@ -150,7 +150,7 @@ void main() {
     expect(restaurada.uidRemoto, vinculacion.uidRemoto);
     expect(restaurada.tokenRemoto, vinculacion.tokenRemoto);
     expect(restaurada.claveBase64, vinculacion.claveBase64);
-    expect(restaurada.rolRemoto, 'COIDADOR');
+    expect(restaurada.rolRemoto, 'SUPERVISOR');
 
     final copiada = restaurada.copyWith(
       tokenRemoto: 'novo-token',
@@ -313,13 +313,13 @@ void main() {
 
     await servizo.confirmarVinculacionPendente(
       id: datos.id,
-      uidCoidador: 'coidador',
-      tokenCoidador: 'token-coidador',
+      uidSupervisor: 'supervisor',
+      tokenSupervisor: 'token-supervisor',
       clavePermanenteBase64: outraClave,
     );
 
     final confirmada = await servizo.obterPorId(datos.id);
-    expect(confirmada?.rolRemoto, 'COIDADOR');
+    expect(confirmada?.rolRemoto, 'SUPERVISOR');
     expect(confirmada?.claveBase64, outraClave);
     expect(await storage.read(key: 'p2p_clave_pendente_${datos.id}'), isNull);
     expect(await storage.read(key: 'p2p_vinculacion_pendente_actual'), isNull);
@@ -331,8 +331,8 @@ void main() {
       expect(
         servizo.confirmarVinculacionPendente(
           id: 'inexistente',
-          uidCoidador: 'uid',
-          tokenCoidador: 'token',
+          uidSupervisor: 'uid',
+          tokenSupervisor: 'token',
           clavePermanenteBase64: clave,
         ),
         throwsA(
@@ -348,8 +348,8 @@ void main() {
       expect(
         servizo.confirmarVinculacionPendente(
           id: id as String,
-          uidCoidador: 'uid',
-          tokenCoidador: 'token',
+          uidSupervisor: 'uid',
+          tokenSupervisor: 'token',
           clavePermanenteBase64: 'incorrecta',
         ),
         throwsA(predicate((e) => e.toString().contains('non válida'))),
@@ -369,7 +369,7 @@ void main() {
       );
       await servizo.gardarVinculacion(vinculacion);
       await servizo.gardarVinculacion(paciente);
-      expect(await servizo.obterPorRolRemoto('COIDADOR'), hasLength(1));
+      expect(await servizo.obterPorRolRemoto('SUPERVISOR'), hasLength(1));
       expect((await servizo.obterPorToken('token-paciente'))?.id, 'paciente');
       expect((await servizo.obterPorUid('uid-paciente'))?.id, 'paciente');
 

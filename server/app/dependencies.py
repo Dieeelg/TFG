@@ -85,7 +85,7 @@ async def lifespan(app):
 
     logging.info(f"API Detida correctamente")
 
-def get_azure_client(request: Request) -> DocumentIntelligenceClient:
+def obter_cliente_azure(request: Request) -> DocumentIntelligenceClient:
     client = request.app.state.doc_intel_client
     if not client:
         raise HTTPException(status_code=500, detail="Servizo Azure non dispoñible")

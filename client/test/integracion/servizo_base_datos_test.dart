@@ -9,14 +9,14 @@ import 'package:tfg_sintrom/servizos/servizo_base_datos.dart';
 import '../axuda/datos_proba.dart';
 
 void main() {
-  late DatabaseService servizo;
+  late ServizoBaseDatos servizo;
 
   setUpAll(() async {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
     final ruta = join(await getDatabasesPath(), 'sintrom.db');
     await databaseFactory.deleteDatabase(ruta);
-    servizo = DatabaseService();
+    servizo = ServizoBaseDatos();
     await servizo.database;
   });
 
@@ -25,7 +25,7 @@ void main() {
     await db.delete('pautas');
     await db.delete('historico_visitas');
     await db.delete('analise_actual');
-    await db.delete('pacientes_coidador');
+    await db.delete('pacientes_supervisor');
   });
 
   test('persiste e reconstrúe unha análise completa', () async {
@@ -84,27 +84,27 @@ void main() {
     expect(await servizo.obterHistorico(), isEmpty);
   });
 
-  test('garda, actualiza e elimina pacientes do coidador', () async {
-    await servizo.gardarPacienteCoidador(
+  test('garda, actualiza e elimina pacientes do supervisor', () async {
+    await servizo.gardarPacienteSupervisor(
       uid: 'p1',
       token: 'token-1',
       nome: 'Ana',
       payload: {'inrActual': '2,4'},
     );
-    await servizo.gardarPacienteCoidador(
+    await servizo.gardarPacienteSupervisor(
       uid: 'p1',
       token: 'token-2',
       payload: {'inrActual': '2,7'},
     );
 
-    final pacientes = await servizo.obterPacientesCoidador();
+    final pacientes = await servizo.obterPacientesSupervisor();
     expect(pacientes, hasLength(1));
     expect(pacientes.single['nome'], 'Ana');
     expect(pacientes.single['token'], 'token-2');
     expect(pacientes.single['datos'], {'inrActual': '2,7'});
 
-    await servizo.eliminarPacienteCoidador('p1');
-    expect(await servizo.obterPacientesCoidador(), isEmpty);
+    await servizo.eliminarPacienteSupervisor('p1');
+    expect(await servizo.obterPacientesSupervisor(), isEmpty);
   });
 
   test('pecha só tomas vencidas reais, non controis nin dose cero', () async {

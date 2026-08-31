@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tfg_sintrom/modelos_vista/inicio_coidador.dart';
+import 'package:tfg_sintrom/modelos_vista/inicio_supervisor.dart';
 
 import '../axuda/datos_proba.dart';
 
@@ -10,7 +10,7 @@ void main() {
     final eventos = StreamController<String>();
     var cargas = 0;
     var sincronizacions = 0;
-    final vm = CaregiverHomeViewModel.conDependencias(
+    final vm = InicioSupervisorViewModel.conDependencias(
       obterPacientes: () async {
         cargas++;
         return [crearPacienteProba(nome: 'Ana $cargas')];
@@ -30,7 +30,7 @@ void main() {
     eventos.add('ignorar');
     await Future<void>.delayed(Duration.zero);
     final antes = cargas;
-    eventos.add('coidador:paciente-1');
+    eventos.add('supervisor:paciente-1');
     await Future<void>.delayed(Duration.zero);
     expect(cargas, antes + 1);
 
@@ -41,7 +41,7 @@ void main() {
   test('evita sincronizacións solapadas', () async {
     final espera = Completer<void>();
     var chamadas = 0;
-    final vm = CaregiverHomeViewModel.conDependencias(
+    final vm = InicioSupervisorViewModel.conDependencias(
       obterPacientes: () async => [],
       solicitarSincronizacion: () {
         chamadas++;
@@ -59,7 +59,7 @@ void main() {
   });
 
   test('expón por separado erros de carga e sincronización', () async {
-    final vmCarga = CaregiverHomeViewModel.conDependencias(
+    final vmCarga = InicioSupervisorViewModel.conDependencias(
       obterPacientes: () async => throw Exception('sqlite'),
       solicitarSincronizacion: () async {},
       actualizacions: const Stream.empty(),
@@ -68,7 +68,7 @@ void main() {
     await vmCarga.cargar();
     expect(vmCarga.erro, 'Non se puideron cargar os pacientes');
 
-    final vmSync = CaregiverHomeViewModel.conDependencias(
+    final vmSync = InicioSupervisorViewModel.conDependencias(
       obterPacientes: () async => [],
       solicitarSincronizacion: () async => throw Exception('rede'),
       actualizacions: const Stream.empty(),

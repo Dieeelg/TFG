@@ -4,36 +4,36 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../servizos/servizo_notificacions_locais.dart';
 import '../../servizos/servizo_sincronizacion_p2p.dart';
 
-class AdditionalSettingsViewModel extends ChangeNotifier {
+class ConfiguracionAdicionalViewModel extends ChangeNotifier {
   final Future<void> Function(String key) _eliminar;
   final Future<void> Function(String key, String value) _escribir;
   final Future<void> Function({required String nome, required String hora})
   _programarTomas;
-  final Future<void> Function(String tipo) _notificarCoidador;
+  final Future<void> Function(String tipo) _notificarSupervisores;
 
-  AdditionalSettingsViewModel({
+  ConfiguracionAdicionalViewModel({
     FlutterSecureStorage storage = const FlutterSecureStorage(),
-    LocalNotificationService? notificacions,
-    P2PSyncService? sincronizacion,
+    ServizoNotificacionsLocais? notificacions,
+    ServizoSincronizacionP2P? sincronizacion,
   }) : this.conDependencias(
          eliminar: (key) => storage.delete(key: key),
          escribir: (key, value) => storage.write(key: key, value: value),
-         programarTomas: (notificacions ?? LocalNotificationService())
+         programarTomas: (notificacions ?? ServizoNotificacionsLocais())
              .programarTomasPaciente,
-         notificarCoidador:
-             (sincronizacion ?? P2PSyncService()).notificarCoidador,
+         notificarSupervisores: (sincronizacion ?? ServizoSincronizacionP2P())
+             .notificarSupervisores,
        );
 
-  AdditionalSettingsViewModel.conDependencias({
+  ConfiguracionAdicionalViewModel.conDependencias({
     required Future<void> Function(String key) eliminar,
     required Future<void> Function(String key, String value) escribir,
     required Future<void> Function({required String nome, required String hora})
     programarTomas,
-    required Future<void> Function(String tipo) notificarCoidador,
+    required Future<void> Function(String tipo) notificarSupervisores,
   }) : _eliminar = eliminar,
        _escribir = escribir,
        _programarTomas = programarTomas,
-       _notificarCoidador = notificarCoidador;
+       _notificarSupervisores = notificarSupervisores;
 
   bool _gardando = false;
   String? _erro;
@@ -56,7 +56,7 @@ class AdditionalSettingsViewModel extends ChangeNotifier {
       await _escribir('hora_toma', hora);
       await _escribir('configuracion_finalizada', 'true');
       await _programarTomas(nome: nomeLimpo, hora: hora);
-      await _notificarCoidador('ESTADO_COMPLETO');
+      await _notificarSupervisores('ESTADO_COMPLETO');
       return true;
     } catch (e) {
       _erro = 'Non se puido gardar a configuración';

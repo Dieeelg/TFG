@@ -4,17 +4,17 @@ import 'package:tfg_sintrom/modelos_vista/axustes_paciente.dart';
 void main() {
   const supervisor = VinculacionP2P(
     id: 'v1',
-    uidRemoto: 'coidador-1',
+    uidRemoto: 'supervisor-1',
     tokenRemoto: 'token',
     claveBase64: 'clave',
-    rolRemoto: 'COIDADOR',
+    rolRemoto: 'SUPERVISOR',
   );
 
   late Map<String, String> storage;
   late List<VinculacionP2P> supervisores;
   late List<String> eventos;
 
-  PatientSettingsViewModel crearVm({
+  AxustesPacienteViewModel crearVm({
     Future<List<VinculacionP2P>> Function()? obterSupervisores,
     Future<String?> Function()? obterUid,
     Future<String?> Function()? obterToken,
@@ -23,7 +23,7 @@ void main() {
       required String tokenPaciente,
     })?
     xerarQr,
-  }) => PatientSettingsViewModel.conDependencias(
+  }) => AxustesPacienteViewModel.conDependencias(
     ler: (key) async => storage[key],
     escribir: (key, value) async => storage[key] = value,
     eliminar: (key) async => storage.remove(key),
@@ -31,8 +31,8 @@ void main() {
     programarTomas: ({required nome, required hora}) async {
       eventos.add('programar:$nome:$hora');
     },
-    notificarCoidador: (tipo) async => eventos.add('notificar:$tipo'),
-    desvincularCoidador: (vinculacion) async {
+    notificarSupervisores: (tipo) async => eventos.add('notificar:$tipo'),
+    desvincularSupervisor: (vinculacion) async {
       eventos.add('desvincular:${vinculacion.id}');
       supervisores.removeWhere((v) => v.id == vinculacion.id);
     },
@@ -99,14 +99,14 @@ void main() {
     expect(await vm.gardar(nome: ' ', hora: '20:00'), isTrue);
     expect(storage.containsKey('nome_usuario'), isFalse);
 
-    final vmErro = PatientSettingsViewModel.conDependencias(
+    final vmErro = AxustesPacienteViewModel.conDependencias(
       ler: (_) async => null,
       escribir: (_, _) async => throw Exception('disco'),
       eliminar: (_) async {},
       obterSupervisores: () async => [],
       programarTomas: ({required nome, required hora}) async {},
-      notificarCoidador: (_) async {},
-      desvincularCoidador: (_) async {},
+      notificarSupervisores: (_) async {},
+      desvincularSupervisor: (_) async {},
       obterUid: () async => null,
       obterToken: () async => null,
       xerarCodigoVinculacion:
@@ -128,14 +128,14 @@ void main() {
   });
 
   test('propaga o erro de desvinculación', () async {
-    final vm = PatientSettingsViewModel.conDependencias(
+    final vm = AxustesPacienteViewModel.conDependencias(
       ler: (_) async => null,
       escribir: (_, _) async {},
       eliminar: (_) async {},
       obterSupervisores: () async => [supervisor],
       programarTomas: ({required nome, required hora}) async {},
-      notificarCoidador: (_) async {},
-      desvincularCoidador: (_) async => throw Exception('non autorizado'),
+      notificarSupervisores: (_) async {},
+      desvincularSupervisor: (_) async => throw Exception('non autorizado'),
       obterUid: () async => null,
       obterToken: () async => null,
       xerarCodigoVinculacion:

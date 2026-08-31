@@ -7,17 +7,17 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'modelos_vista/autenticacion/configuracion_inicial.dart';
 import 'modelos_vista/autenticacion/configuracion_adicional.dart';
 import 'modelos_vista/autenticacion/vinculacion_paciente.dart';
-import 'modelos_vista/autenticacion/vinculacion_coidador.dart';
-import 'modelos_vista/inicio.dart';
+import 'modelos_vista/autenticacion/vinculacion_supervisor.dart';
+import 'modelos_vista/inicio_paciente.dart';
 import 'modelos_vista/configuracion_paciente_supervisado.dart';
 
 //Importación das views
 import 'views/inicio_paciente.dart';
 import 'views/autenticacion/configuracion_inicial.dart';
-import 'views/autenticacion/vinculacion_coidador.dart';
+import 'views/autenticacion/vinculacion_supervisor.dart';
 import 'views/autenticacion/vinculacion_paciente.dart';
 import 'views/autenticacion/configuracion_adicional.dart';
-import 'views/inicio_coidador.dart';
+import 'views/inicio_supervisor.dart';
 import 'views/camara/captura_informe.dart';
 import 'servizos/inicializador_aplicacion.dart';
 import 'servizos/servizo_sincronizacion_p2p.dart';
@@ -25,7 +25,7 @@ import 'servizos/servizo_sincronizacion_p2p.dart';
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
-  await P2PSyncService().procesarMensaxe(message);
+  await ServizoSincronizacionP2P().procesarMensaxe(message);
 }
 
 void main() async {
@@ -37,16 +37,18 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => SetupViewModel()),
-        ChangeNotifierProvider(create: (_) => AdditionalSettingsViewModel()),
-        ChangeNotifierProvider(create: (_) => VinculacionPacienteViewModel()),
-        ChangeNotifierProvider(create: (_) => VinculacionCoidadorViewModel()),
-        ChangeNotifierProvider(create: (_) => HomeViewModel()),
+        ChangeNotifierProvider(create: (_) => ConfiguracionInicialViewModel()),
         ChangeNotifierProvider(
-          create: (_) => CaregiverPatientSettingsViewModel(),
+          create: (_) => ConfiguracionAdicionalViewModel(),
+        ),
+        ChangeNotifierProvider(create: (_) => VinculacionPacienteViewModel()),
+        ChangeNotifierProvider(create: (_) => VinculacionSupervisorViewModel()),
+        ChangeNotifierProvider(create: (_) => InicioPacienteViewModel()),
+        ChangeNotifierProvider(
+          create: (_) => ConfiguracionPacienteSupervisadoViewModel(),
         ),
       ],
-      child: MyApp(
+      child: SintromApp(
         xaConfigurado: inicializacion.xaConfigurado,
         rolUsuario: inicializacion.rolUsuario,
       ),
@@ -54,10 +56,10 @@ void main() async {
   );
 }
 
-class MyApp extends StatelessWidget {
+class SintromApp extends StatelessWidget {
   final bool xaConfigurado;
   final String? rolUsuario;
-  const MyApp({
+  const SintromApp({
     super.key,
     required this.xaConfigurado,
     required this.rolUsuario,
@@ -75,16 +77,17 @@ class MyApp extends StatelessWidget {
 
       // Se o setup non rematou, sempre comeza na primeira pantalla.
       initialRoute: xaConfigurado
-          ? (rolUsuario == 'COIDADOR' ? '/coidador' : '/home')
+          ? (rolUsuario == 'SUPERVISOR' ? '/supervisor' : '/paciente')
           : '/',
       routes: {
-        '/': (context) => const SetupScreen(),
-        '/vincular_coidador': (context) => const VincularCoidadorScreen(),
-        '/vincular_paciente': (context) => const VinculacionScreen(),
+        '/': (context) => const ConfiguracionInicialScreen(),
+        '/vincular_supervisor': (context) =>
+            const VinculacionSupervisorScreen(),
+        '/vincular_paciente': (context) => const VinculacionPacienteScreen(),
         '/configuracion_adicional': (context) =>
-            const AdditionalSettingsScreen(),
-        '/home': (context) => const PacienteHomeScreen(),
-        '/coidador': (context) => const CaregiverHomeScreen(),
+            const ConfiguracionAdicionalScreen(),
+        '/paciente': (context) => const InicioPacienteScreen(),
+        '/supervisor': (context) => const InicioSupervisorScreen(),
         '/captura': (context) => const CapturaInformeScreen(),
       },
     );

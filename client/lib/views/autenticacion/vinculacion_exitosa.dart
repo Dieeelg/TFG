@@ -12,7 +12,11 @@ class VinculacionExitosaScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.check_circle_outline, color: Colors.green, size: 100),
+              const Icon(
+                Icons.check_circle_outline,
+                color: Colors.green,
+                size: 100,
+              ),
               const SizedBox(height: 24),
               const Text(
                 '¡Vinculación completada!',
@@ -30,14 +34,17 @@ class VinculacionExitosaScreen extends StatelessWidget {
                 child: ElevatedButton(
                   onPressed: () => Navigator.pushNamedAndRemoveUntil(
                     context,
-                    '/coidador',
+                    '/supervisor',
                     (route) => false,
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
-                  child: const Text('Ir á miña Home', style: TextStyle(color: Colors.white)),
+                  child: const Text(
+                    'Ir á miña Home',
+                    style: TextStyle(color: Colors.white),
+                  ),
                 ),
               ),
             ],

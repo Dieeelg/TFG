@@ -9,15 +9,16 @@ import '../servizos/servizo_sincronizacion_p2p.dart';
 
 export '../servizos/servizo_cifrado_p2p.dart' show VinculacionP2P;
 
-class PatientSettingsViewModel extends ChangeNotifier {
+class AxustesPacienteViewModel extends ChangeNotifier {
   final Future<String?> Function(String key) _ler;
   final Future<void> Function(String key, String value) _escribir;
   final Future<void> Function(String key) _eliminar;
   final Future<List<VinculacionP2P>> Function() _obterSupervisores;
   final Future<void> Function({required String nome, required String hora})
   _programarTomas;
-  final Future<void> Function(String tipo) _notificarCoidador;
-  final Future<void> Function(VinculacionP2P vinculacion) _desvincularCoidador;
+  final Future<void> Function(String tipo) _notificarSupervisores;
+  final Future<void> Function(VinculacionP2P vinculacion)
+  _desvincularSupervisor;
   final Future<String?> Function() _obterUid;
   final Future<String?> Function() _obterToken;
   final Future<String> Function({
@@ -26,11 +27,11 @@ class PatientSettingsViewModel extends ChangeNotifier {
   })
   _xerarCodigoVinculacion;
 
-  PatientSettingsViewModel({
+  AxustesPacienteViewModel({
     FlutterSecureStorage storage = const FlutterSecureStorage(),
     ServizoCifradoP2P? cifrado,
-    LocalNotificationService? notificacions,
-    P2PSyncService? sincronizacion,
+    ServizoNotificacionsLocais? notificacions,
+    ServizoSincronizacionP2P? sincronizacion,
     Future<String?> Function()? obterUid,
     Future<String?> Function()? obterToken,
   }) : this.conDependencias(
@@ -38,13 +39,13 @@ class PatientSettingsViewModel extends ChangeNotifier {
          escribir: (key, value) => storage.write(key: key, value: value),
          eliminar: (key) => storage.delete(key: key),
          obterSupervisores: () =>
-             (cifrado ?? ServizoCifradoP2P()).obterPorRolRemoto('COIDADOR'),
-         programarTomas: (notificacions ?? LocalNotificationService())
+             (cifrado ?? ServizoCifradoP2P()).obterPorRolRemoto('SUPERVISOR'),
+         programarTomas: (notificacions ?? ServizoNotificacionsLocais())
              .programarTomasPaciente,
-         notificarCoidador:
-             (sincronizacion ?? P2PSyncService()).notificarCoidador,
-         desvincularCoidador:
-             (sincronizacion ?? P2PSyncService()).desvincularCoidador,
+         notificarSupervisores: (sincronizacion ?? ServizoSincronizacionP2P())
+             .notificarSupervisores,
+         desvincularSupervisor: (sincronizacion ?? ServizoSincronizacionP2P())
+             .desvincularSupervisor,
          obterUid:
              obterUid ?? (() async => FirebaseAuth.instance.currentUser?.uid),
          obterToken:
@@ -53,16 +54,16 @@ class PatientSettingsViewModel extends ChangeNotifier {
              (cifrado ?? ServizoCifradoP2P()).xerarCodigoVinculacion,
        );
 
-  PatientSettingsViewModel.conDependencias({
+  AxustesPacienteViewModel.conDependencias({
     required Future<String?> Function(String key) ler,
     required Future<void> Function(String key, String value) escribir,
     required Future<void> Function(String key) eliminar,
     required Future<List<VinculacionP2P>> Function() obterSupervisores,
     required Future<void> Function({required String nome, required String hora})
     programarTomas,
-    required Future<void> Function(String tipo) notificarCoidador,
+    required Future<void> Function(String tipo) notificarSupervisores,
     required Future<void> Function(VinculacionP2P vinculacion)
-    desvincularCoidador,
+    desvincularSupervisor,
     required Future<String?> Function() obterUid,
     required Future<String?> Function() obterToken,
     required Future<String> Function({
@@ -75,8 +76,8 @@ class PatientSettingsViewModel extends ChangeNotifier {
        _eliminar = eliminar,
        _obterSupervisores = obterSupervisores,
        _programarTomas = programarTomas,
-       _notificarCoidador = notificarCoidador,
-       _desvincularCoidador = desvincularCoidador,
+       _notificarSupervisores = notificarSupervisores,
+       _desvincularSupervisor = desvincularSupervisor,
        _obterUid = obterUid,
        _obterToken = obterToken,
        _xerarCodigoVinculacion = xerarCodigoVinculacion;
@@ -144,7 +145,7 @@ class PatientSettingsViewModel extends ChangeNotifier {
       await _escribir('hora_toma', hora);
       await _escribir('modo_sinxelo', _modoSinxelo ? 'true' : 'false');
       await _programarTomas(nome: nomeLimpo, hora: hora);
-      await _notificarCoidador('ESTADO_COMPLETO');
+      await _notificarSupervisores('ESTADO_COMPLETO');
       _nome = nomeLimpo;
       _hora = hora;
       return true;
@@ -162,7 +163,7 @@ class PatientSettingsViewModel extends ChangeNotifier {
     _erro = null;
     notifyListeners();
     try {
-      await _desvincularCoidador(vinculacion);
+      await _desvincularSupervisor(vinculacion);
       _supervisores = await _obterSupervisores();
       return true;
     } catch (e) {

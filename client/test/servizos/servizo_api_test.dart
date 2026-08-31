@@ -9,34 +9,34 @@ import 'package:tfg_sintrom/servizos/servizo_api.dart';
 
 void main() {
   test(
-    'health distingue resposta correcta, erro HTTP e erro de rede',
+    'estado distingue resposta correcta, erro HTTP e erro de rede',
     () async {
-      final ok = ApiService(
+      final ok = ServizoApi(
         client: MockClient((request) async {
-          expect(request.url.path, AppConstants.endpointHealth);
+          expect(request.url.path, ConstantesAplicacion.endpointEstado);
           return http.Response('', 200);
         }),
       );
-      expect(await ok.checkHealth(), isTrue);
+      expect(await ok.comprobarEstado(), isTrue);
 
-      final erroHttp = ApiService(
+      final erroHttp = ServizoApi(
         client: MockClient((_) async => http.Response('', 503)),
       );
-      expect(await erroHttp.checkHealth(), isFalse);
+      expect(await erroHttp.comprobarEstado(), isFalse);
 
-      final erroRede = ApiService(
+      final erroRede = ServizoApi(
         client: MockClient(
           (_) async => throw const SocketException('sen rede'),
         ),
       );
-      expect(await erroRede.checkHealth(), isFalse);
+      expect(await erroRede.comprobarEstado(), isFalse);
     },
   );
 
   test('buscar centro codifica a consulta e interpreta a resposta', () async {
-    final api = ApiService(
+    final api = ServizoApi(
       client: MockClient((request) async {
-        expect(request.url.path, AppConstants.endpointCentro);
+        expect(request.url.path, ConstantesAplicacion.endpointCentro);
         expect(request.url.queryParameters['nome'], 'A Coruña');
         return http.Response(
           jsonEncode({'nome': 'Centro', 'telefono': '981'}),
@@ -52,7 +52,7 @@ void main() {
   });
 
   test('buscar centro conserva o detalle de erro da API', () async {
-    final api = ApiService(
+    final api = ServizoApi(
       client: MockClient(
         (_) async => http.Response(jsonEncode({'detail': 'Non atopado'}), 404),
       ),
@@ -64,10 +64,10 @@ void main() {
   });
 
   test('envía unha notificación co contrato JSON esperado', () async {
-    final api = ApiService(
+    final api = ServizoApi(
       client: MockClient((request) async {
         expect(request.method, 'POST');
-        expect(request.url.path, AppConstants.endpointEnviarNotif);
+        expect(request.url.path, ConstantesAplicacion.endpointEnviarNotif);
         expect(request.headers['content-type'], contains('application/json'));
         expect(jsonDecode(request.body), {
           'token_destino': 'token',
@@ -89,7 +89,7 @@ void main() {
   });
 
   test('notificación devolve false ante HTTP ou rede', () async {
-    final erroHttp = ApiService(
+    final erroHttp = ServizoApi(
       client: MockClient((_) async => http.Response('', 500)),
     );
     expect(
@@ -101,7 +101,7 @@ void main() {
       isFalse,
     );
 
-    final erroRede = ApiService(
+    final erroRede = ServizoApi(
       client: MockClient((_) async => throw const SocketException('sen rede')),
     );
     expect(
@@ -121,10 +121,10 @@ void main() {
     await temporal.writeAsBytes([1, 2, 3]);
     addTearDown(() => temporal.deleteSync());
 
-    final api = ApiService(
+    final api = ServizoApi(
       client: MockClient((request) async {
         expect(request.method, 'POST');
-        expect(request.url.path, AppConstants.endpointExtraccion);
+        expect(request.url.path, ConstantesAplicacion.endpointExtraccion);
         expect(
           request.headers['content-type'],
           contains('multipart/form-data'),
@@ -169,7 +169,7 @@ void main() {
     await temporal.writeAsBytes([1]);
     addTearDown(() => temporal.deleteSync());
 
-    final erroHttp = ApiService(
+    final erroHttp = ServizoApi(
       client: MockClient(
         (_) async =>
             http.Response(jsonEncode({'detail': 'Imaxe borrosa'}), 422),
@@ -180,7 +180,7 @@ void main() {
       throwsA(predicate((e) => e.toString().contains('Imaxe borrosa'))),
     );
 
-    final erroRede = ApiService(
+    final erroRede = ServizoApi(
       client: MockClient((_) async => throw const SocketException('sen rede')),
     );
     expect(

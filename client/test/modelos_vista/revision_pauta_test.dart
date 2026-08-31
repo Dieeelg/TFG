@@ -29,7 +29,7 @@ void main() {
   );
 
   test('ordena, edita e confirma unha pauta válida', () {
-    final vm = TreatmentReviewViewModel(analise());
+    final vm = RevisionPautaViewModel(analise());
 
     expect(vm.analise.calendario.first.data, '2026-08-21');
     vm.iniciarEdicion();
@@ -42,7 +42,7 @@ void main() {
   });
 
   test('cancelar restaura a última revisión confirmada', () {
-    final vm = TreatmentReviewViewModel(analise());
+    final vm = RevisionPautaViewModel(analise());
 
     vm.iniciarEdicion();
     vm.eliminarDia(0);
@@ -53,11 +53,27 @@ void main() {
   });
 
   test('non confirma unha pauta baleira', () {
-    final vm = TreatmentReviewViewModel(analise());
+    final vm = RevisionPautaViewModel(analise());
     vm.eliminarDia(1);
     vm.eliminarDia(0);
 
     expect(vm.confirmar(), isNull);
     expect(vm.erro, 'A pauta debe conter polo menos un día.');
+  });
+
+  test('engade días e impide datas repetidas', () {
+    final vm = RevisionPautaViewModel(analise());
+
+    expect(
+      vm.engadirDia(data: DateTime(2026, 8, 20), dose: '1/4', eControl: false),
+      isTrue,
+    );
+    expect(vm.analise.calendario.first.data, '2026-08-20');
+
+    expect(
+      vm.engadirDia(data: DateTime(2026, 8, 20), dose: '1', eControl: false),
+      isFalse,
+    );
+    expect(vm.erro, 'A data 2026-08-20 xa existe na pauta.');
   });
 }

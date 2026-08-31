@@ -2,12 +2,13 @@ import 'cabeceira.dart';
 import 'dose_dia.dart';
 import 'historico.dart';
 
-class AnaliseModel{
+class AnaliseModel {
   final CabeceiraModel cabeceira;
   final List<DoseDiaModel> calendario;
   final List<ItemHistoricoModel> historico;
 
-  AnaliseModel({ //Constructor
+  AnaliseModel({
+    //Constructor
     required this.cabeceira,
     required this.calendario,
     required this.historico,

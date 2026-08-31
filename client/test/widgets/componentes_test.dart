@@ -11,7 +11,7 @@ void main() {
       MaterialApp(
         home: const Scaffold(
           body: Text('Inicio'),
-          bottomNavigationBar: AppBottomNav(currentIndex: 0),
+          bottomNavigationBar: BarraNavegacionInferior(currentIndex: 0),
         ),
         routes: {
           '/captura': (_) => const Scaffold(body: Text('Captura aberta')),
@@ -34,27 +34,38 @@ void main() {
     expect(find.text('Captura aberta'), findsOneWidget);
   });
 
-  testWidgets('DoseVisual pinta doses completas e fraccionarias sen erros', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Row(
-          children: [
-            CustomPaint(size: const Size(40, 40), painter: DoseVisual(0.5)),
-            CustomPaint(size: const Size(40, 40), painter: DoseVisual(1)),
-          ],
+  testWidgets(
+    'RepresentacionDose pinta doses completas e fraccionarias sen erros',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Row(
+            children: [
+              CustomPaint(
+                size: const Size(40, 40),
+                painter: RepresentacionDose(0.5),
+              ),
+              CustomPaint(
+                size: const Size(40, 40),
+                painter: RepresentacionDose(1),
+              ),
+            ],
+          ),
         ),
-      ),
-    );
+      );
 
-    expect(
-      find.byWidgetPredicate(
-        (widget) => widget is CustomPaint && widget.painter is DoseVisual,
-      ),
-      findsNWidgets(2),
-    );
-    expect(DoseVisual(0.5).shouldRepaint(DoseVisual(0.5)), isTrue);
-    expect(tester.takeException(), isNull);
-  });
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is CustomPaint && widget.painter is RepresentacionDose,
+        ),
+        findsNWidgets(2),
+      );
+      expect(
+        RepresentacionDose(0.5).shouldRepaint(RepresentacionDose(0.5)),
+        isTrue,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

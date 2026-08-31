@@ -6,11 +6,11 @@ import '../modelos_vista/axustes_paciente.dart';
 class AxustesPacienteScreen extends StatelessWidget {
   const AxustesPacienteScreen({super.key, this.viewModel});
 
-  final PatientSettingsViewModel? viewModel;
+  final AxustesPacienteViewModel? viewModel;
 
   @override
   Widget build(BuildContext context) => ChangeNotifierProvider(
-    create: (_) => viewModel ?? (PatientSettingsViewModel()..cargar()),
+    create: (_) => viewModel ?? (AxustesPacienteViewModel()..cargar()),
     child: const _AxustesPacienteView(),
   );
 }
@@ -31,7 +31,7 @@ class _AxustesPacienteViewState extends State<_AxustesPacienteView> {
     VinculacionP2P vinculacion,
     int indice,
   ) async {
-    final vm = context.read<PatientSettingsViewModel>();
+    final vm = context.read<AxustesPacienteViewModel>();
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -87,7 +87,7 @@ class _AxustesPacienteViewState extends State<_AxustesPacienteView> {
       if (confirmar != true) return;
     }
     if (mounted) {
-      context.read<PatientSettingsViewModel>().cambiarModoSinxelo(activar);
+      context.read<AxustesPacienteViewModel>().cambiarModoSinxelo(activar);
     }
   }
 
@@ -105,7 +105,7 @@ class _AxustesPacienteViewState extends State<_AxustesPacienteView> {
   }
 
   Future<void> _gardar() async {
-    final vm = context.read<PatientSettingsViewModel>();
+    final vm = context.read<AxustesPacienteViewModel>();
     final hora =
         '${_hora.hour.toString().padLeft(2, '0')}:${_hora.minute.toString().padLeft(2, '0')}';
     final gardado = await vm.gardar(nome: _nomeController.text, hora: hora);
@@ -120,7 +120,7 @@ class _AxustesPacienteViewState extends State<_AxustesPacienteView> {
   }
 
   Future<void> _mostrarQr() async {
-    final vm = context.read<PatientSettingsViewModel>();
+    final vm = context.read<AxustesPacienteViewModel>();
     final codigoQr = await vm.xerarCodigoQr();
     if (!mounted) return;
     if (codigoQr == null) {
@@ -162,7 +162,7 @@ class _AxustesPacienteViewState extends State<_AxustesPacienteView> {
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<PatientSettingsViewModel>();
+    final vm = context.watch<AxustesPacienteViewModel>();
     if (vm.cargado && !_datosAplicados) {
       _nomeController.text = vm.nome;
       final partes = vm.hora.split(':');
@@ -275,7 +275,7 @@ class _AxustesPacienteViewState extends State<_AxustesPacienteView> {
                       ),
                     ),
                     subtitle: const Text(
-                      'Vincular a aplicación con outra persoa coidadora.',
+                      'Vincular a aplicación con outra persoa supervisora.',
                     ),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: _mostrarQr,

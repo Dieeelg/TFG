@@ -18,7 +18,8 @@ class VinculacionPacienteViewModel extends ChangeNotifier {
   _xerarCodigo;
   final Future<String?> Function(String key) _ler;
   final bool _activarTimer;
-  bool _tenCoidador = false;
+  bool _tenSupervisor = false;
+  String? _erro;
 
   VinculacionPacienteViewModel({
     FirebaseAuth? autenticacion,
@@ -51,17 +52,20 @@ class VinculacionPacienteViewModel extends ChangeNotifier {
        _ler = ler,
        _activarTimer = activarTimer;
 
-  bool get tenCoidador => _tenCoidador;
+  bool get tenSupervisor => _tenSupervisor;
   String? get datosQR => _datosQR;
   bool get cargando => _cargando;
+  String? get erro => _erro;
 
   Future<void> xerarDatosVinculacion() async {
     _cargando = true;
+    _datosQR = null;
+    _erro = null;
     notifyListeners();
 
     try {
       final String uid = await _obterUid() ?? "sen_id";
-      String? token = await _obterToken();
+      final token = await _obterToken().timeout(const Duration(seconds: 15));
 
       if (token == null || token.isEmpty) {
         throw Exception('Non se puido obter o token de mensaxería');
@@ -70,7 +74,9 @@ class VinculacionPacienteViewModel extends ChangeNotifier {
 
       if (_activarTimer) _iniciarChequeoAutomatico();
     } catch (e) {
-      _datosQR = "erro_datos";
+      _datosQR = null;
+      _erro =
+          'Non se puido crear o código. Comproba a conexión e téntao de novo.';
     } finally {
       _cargando = false;
       notifyListeners();
@@ -78,20 +84,20 @@ class VinculacionPacienteViewModel extends ChangeNotifier {
   }
 
   void _iniciarChequeoAutomatico() {
-    //Miramos cada dous segundos se xa esta no storage o UID do coidador
+    //Miramos cada dous segundos se xa esta no storage o UID do supervisor
     _timer?.cancel(); // Cancelamos se houbera un previo
     _timer = Timer.periodic(const Duration(seconds: 2), (timer) async {
       await comprobarEstadoVinculacion();
-      if (_tenCoidador) {
-        timer.cancel(); // Se xa temos coidador, paramos o timer
+      if (_tenSupervisor) {
+        timer.cancel(); // Se xa temos supervisor, paramos o timer
       }
     });
   }
 
   Future<void> comprobarEstadoVinculacion() async {
-    String? tokenCoidador = await _ler('token_coidador');
-    if (tokenCoidador != null && !_tenCoidador) {
-      _tenCoidador = true;
+    String? tokenSupervisor = await _ler('token_supervisor');
+    if (tokenSupervisor != null && !_tenSupervisor) {
+      _tenSupervisor = true;
       notifyListeners();
     }
   }

@@ -11,7 +11,7 @@ import '../servizos/servizo_base_datos.dart';
 import '../servizos/servizo_sincronizacion_p2p.dart';
 import '../servizos/servizo_notificacions_locais.dart';
 
-class HomeViewModel extends ChangeNotifier {
+class InicioPacienteViewModel extends ChangeNotifier {
   final Future<String?> Function(String key) _ler;
   final Future<List<String>> Function() _pecharTomasVencidas;
   final Future<List<DoseDiaModel>> Function() _obterPauta;
@@ -24,7 +24,7 @@ class HomeViewModel extends ChangeNotifier {
     required bool foraDeHora,
   })
   _rexistrarToma;
-  final Future<void> Function(String tipo) _notificarCoidador;
+  final Future<void> Function(String tipo) _notificarSupervisores;
   final Future<void> Function({required String identificador})
   _cancelarEsquecemento;
   final Future<bool> Function({
@@ -37,33 +37,34 @@ class HomeViewModel extends ChangeNotifier {
   final Stream<String> _actualizacions;
   final DateTime Function() _agora;
 
-  HomeViewModel({
+  InicioPacienteViewModel({
     FlutterSecureStorage storage = const FlutterSecureStorage(),
-    DatabaseService? database,
-    P2PSyncService? sincronizacion,
-    LocalNotificationService? notificacions,
-    ApiService? api,
+    ServizoBaseDatos? database,
+    ServizoSincronizacionP2P? sincronizacion,
+    ServizoNotificacionsLocais? notificacions,
+    ServizoApi? api,
     DateTime Function()? agora,
   }) : this.conDependencias(
          ler: (key) => storage.read(key: key),
          pecharTomasVencidas:
-             (database ?? DatabaseService()).pecharTomasVencidas,
-         obterPauta: (database ?? DatabaseService()).obterPauta,
-         obterEstados: (database ?? DatabaseService()).obterEstados,
-         obterCabeceira: (database ?? DatabaseService()).obterCabeceira,
-         rexistrarToma: (database ?? DatabaseService()).rexistrarToma,
-         notificarCoidador:
-             (sincronizacion ?? P2PSyncService()).notificarCoidador,
-         cancelarEsquecemento: (notificacions ?? LocalNotificationService())
+             (database ?? ServizoBaseDatos()).pecharTomasVencidas,
+         obterPauta: (database ?? ServizoBaseDatos()).obterPauta,
+         obterEstados: (database ?? ServizoBaseDatos()).obterEstados,
+         obterCabeceira: (database ?? ServizoBaseDatos()).obterCabeceira,
+         rexistrarToma: (database ?? ServizoBaseDatos()).rexistrarToma,
+         notificarSupervisores: (sincronizacion ?? ServizoSincronizacionP2P())
+             .notificarSupervisores,
+         cancelarEsquecemento: (notificacions ?? ServizoNotificacionsLocais())
              .cancelarEsquecementoHoxe,
-         enviarPayload:
-             (sincronizacion ?? P2PSyncService()).enviarPayloadParaToken,
-         buscarCentro: (api ?? ApiService()).buscarCentro,
-         actualizacions: (sincronizacion ?? P2PSyncService()).actualizacions,
+         enviarPayload: (sincronizacion ?? ServizoSincronizacionP2P())
+             .enviarPayloadParaToken,
+         buscarCentro: (api ?? ServizoApi()).buscarCentro,
+         actualizacions:
+             (sincronizacion ?? ServizoSincronizacionP2P()).actualizacions,
          agora: agora,
        );
 
-  HomeViewModel.conDependencias({
+  InicioPacienteViewModel.conDependencias({
     required Future<String?> Function(String key) ler,
     required Future<List<String>> Function() pecharTomasVencidas,
     required Future<List<DoseDiaModel>> Function() obterPauta,
@@ -76,7 +77,7 @@ class HomeViewModel extends ChangeNotifier {
       required bool foraDeHora,
     })
     rexistrarToma,
-    required Future<void> Function(String tipo) notificarCoidador,
+    required Future<void> Function(String tipo) notificarSupervisores,
     required Future<void> Function({required String identificador})
     cancelarEsquecemento,
     required Future<bool> Function({
@@ -94,7 +95,7 @@ class HomeViewModel extends ChangeNotifier {
        _obterEstados = obterEstados,
        _obterCabeceira = obterCabeceira,
        _rexistrarToma = rexistrarToma,
-       _notificarCoidador = notificarCoidador,
+       _notificarSupervisores = notificarSupervisores,
        _cancelarEsquecemento = cancelarEsquecemento,
        _enviarPayload = enviarPayload,
        _buscarCentro = buscarCentro,
@@ -118,14 +119,14 @@ class HomeViewModel extends ChangeNotifier {
   String? get nomeUsuario => _nomeUsuario;
   String get horaToma => _horaToma;
   CabeceiraModel? get cabeceira => _cabeceira;
-  PautaToma? get tomaHoxe {
+  PautaTomaModel? get tomaHoxe {
     if (pautaSemanal.isEmpty) return null;
     final hoxe = _agora().toIso8601String().substring(0, 10);
     return pautaSemanal.where((toma) => toma.data == hoxe).firstOrNull ??
         pautaSemanal.where((toma) => toma.data.compareTo(hoxe) > 0).firstOrNull;
   }
 
-  List<PautaToma> pautaSemanal = [];
+  List<PautaTomaModel> pautaSemanal = [];
 
   Future<void> iniciar() async {
     if (_iniciado) return;
@@ -180,7 +181,7 @@ class HomeViewModel extends ChangeNotifier {
       if (pautaBD.isNotEmpty) {
         pautaSemanal = pautaBD
             .map(
-              (dia) => PautaToma(
+              (dia) => PautaTomaModel(
                 data: dia.data,
                 dia: "${dia.diaSemanaTexto.substring(0, 3)} ${dia.dia}",
                 dose: dia.eControl
@@ -203,7 +204,7 @@ class HomeViewModel extends ChangeNotifier {
         );
       }
       if (novasTomasEsquecidas.isNotEmpty) {
-        await _notificarCoidador('TOMA_ESQUECIDA');
+        await _notificarSupervisores('TOMA_ESQUECIDA');
       }
     } catch (e) {
       debugPrint("Erro ao cargar datos da BD: $e");
@@ -241,23 +242,23 @@ class HomeViewModel extends ChangeNotifier {
       foraDeHora: foraDeHora,
     );
     await cargarDatosHome();
-    await _notificarCoidador('TOMA_CONFIRMADA');
+    await _notificarSupervisores('TOMA_CONFIRMADA');
     final hora = horaConfigurada;
     if (hora != null) {
       await _cancelarEsquecemento(identificador: 'paciente_local');
     }
   }
 
-  Future<void> confirmarToma(String tokenCoidador, String payload) async {
-    // Aquí podes usar o método enviarNotificacion que xa existe en ApiService
+  Future<void> confirmarToma(String tokenSupervisor, String payload) async {
+    // Aquí podes usar o método enviarNotificacion que xa existe en ServizoApi
     bool ok = await _enviarPayload(
-      tokenDestino: tokenCoidador,
+      tokenDestino: tokenSupervisor,
       payload: payload,
       tipoAviso: "TOMA_CONFIRMADA",
     );
 
     if (ok) {
-      debugPrint("Coidador notificado correctamente");
+      debugPrint("Supervisor notificado correctamente");
     }
     notifyListeners();
   }
@@ -266,7 +267,7 @@ class HomeViewModel extends ChangeNotifier {
     final info = await _buscarCentro(centro);
     final telefono = info['telefono'] as String?;
     if (telefono == null || telefono.trim().isEmpty) {
-      throw Exception('O centro non ten un telÃ©fono dispoÃ±ible');
+      throw Exception('O centro non ten un teléfono dispoñible');
     }
     return telefono.trim();
   }

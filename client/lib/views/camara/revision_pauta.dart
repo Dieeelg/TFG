@@ -18,7 +18,7 @@ class RevisionPautaScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ChangeNotifierProvider(
-    create: (_) => TreatmentReviewViewModel(analise),
+    create: (_) => RevisionPautaViewModel(analise),
     child: _RevisionPautaView(paraEnviar: paraEnviar),
   );
 }
@@ -32,7 +32,7 @@ class _RevisionPautaView extends StatefulWidget {
 }
 
 class _RevisionPautaViewState extends State<_RevisionPautaView> {
-  TreatmentReviewViewModel get _vm => context.read<TreatmentReviewViewModel>();
+  RevisionPautaViewModel get _vm => context.read<RevisionPautaViewModel>();
   AnaliseModel get _analise => _vm.analise;
   bool get _editando => _vm.editando;
 
@@ -43,7 +43,7 @@ class _RevisionPautaViewState extends State<_RevisionPautaView> {
 
   @override
   Widget build(BuildContext context) {
-    context.watch<TreatmentReviewViewModel>();
+    context.watch<RevisionPautaViewModel>();
     return Scaffold(
       backgroundColor: _fondo,
       appBar: AppBar(
@@ -298,105 +298,122 @@ class _RevisionPautaViewState extends State<_RevisionPautaView> {
   }
 
   Widget _listaEditable() => Column(
-    children: List.generate(_analise.calendario.length, (indice) {
-      final dia = _analise.calendario[indice];
-      return Padding(
-        padding: EdgeInsets.only(
-          bottom: indice == _analise.calendario.length - 1 ? 0 : 12,
-        ),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF6F8FA),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFE1E4E8)),
+    children: [
+      ...List.generate(_analise.calendario.length, (indice) {
+        final dia = _analise.calendario[indice];
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: indice == _analise.calendario.length - 1 ? 0 : 12,
           ),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    backgroundColor: dia.eControl
-                        ? _escuro
-                        : const Color(0xFFDDF3EF),
-                    child: Text(
-                      dia.eControl ? 'C' : (dia.dose ?? '--'),
-                      style: TextStyle(
-                        color: dia.eControl
-                            ? Colors.white
-                            : const Color(0xFF167B72),
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(12),
-                      onTap: () => _escollerDataDia(indice),
-                      child: InputDecorator(
-                        decoration: const InputDecoration(
-                          labelText: 'Data',
-                          border: OutlineInputBorder(),
-                          suffixIcon: Icon(Icons.calendar_today_outlined),
-                        ),
-                        child: Text(
-                          _dataVisible(dia.data),
-                          style: const TextStyle(fontSize: 16),
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF6F8FA),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE1E4E8)),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: dia.eControl
+                          ? _escuro
+                          : const Color(0xFFDDF3EF),
+                      child: Text(
+                        dia.eControl ? 'C' : (dia.dose ?? '--'),
+                        style: TextStyle(
+                          color: dia.eControl
+                              ? Colors.white
+                              : const Color(0xFF167B72),
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 6),
-                  IconButton(
-                    key: ValueKey('eliminar-dia-$indice'),
-                    tooltip: 'Eliminar este día',
-                    onPressed: () => _eliminarDia(indice),
-                    color: Colors.red.shade700,
-                    icon: const Icon(Icons.delete_outline),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: dia.eControl
-                          ? null
-                          : () => _escollerDose(indice),
-                      icon: const Icon(Icons.medication_outlined),
-                      label: Text(
-                        dia.eControl ? 'Sen dose' : 'Dose: ${dia.dose ?? '--'}',
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(48),
-                        alignment: Alignment.centerLeft,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () => _escollerDataDia(indice),
+                        child: InputDecorator(
+                          decoration: const InputDecoration(
+                            labelText: 'Data',
+                            border: OutlineInputBorder(),
+                            suffixIcon: Icon(Icons.calendar_today_outlined),
+                          ),
+                          child: Text(
+                            _dataVisible(dia.data),
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Column(
-                    children: [
-                      const Text(
-                        'Control',
-                        style: TextStyle(fontSize: 12, color: Colors.black54),
+                    const SizedBox(width: 6),
+                    IconButton(
+                      key: ValueKey('eliminar-dia-$indice'),
+                      tooltip: 'Eliminar este día',
+                      onPressed: () => _eliminarDia(indice),
+                      color: Colors.red.shade700,
+                      icon: const Icon(Icons.delete_outline),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: dia.eControl
+                            ? null
+                            : () => _escollerDose(indice),
+                        icon: const Icon(Icons.medication_outlined),
+                        label: Text(
+                          dia.eControl
+                              ? 'Sen dose'
+                              : 'Dose: ${dia.dose ?? '--'}',
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(48),
+                          alignment: Alignment.centerLeft,
+                        ),
                       ),
-                      Switch(
-                        value: dia.eControl,
-                        activeThumbColor: _verde,
-                        onChanged: (valor) =>
-                            _vm.actualizarDia(indice, eControl: valor),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ],
+                    ),
+                    const SizedBox(width: 10),
+                    Column(
+                      children: [
+                        const Text(
+                          'Control',
+                          style: TextStyle(fontSize: 12, color: Colors.black54),
+                        ),
+                        Switch(
+                          value: dia.eControl,
+                          activeThumbColor: _verde,
+                          onChanged: (valor) =>
+                              _vm.actualizarDia(indice, eControl: valor),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
+        );
+      }),
+      const SizedBox(height: 14),
+      OutlinedButton.icon(
+        key: const ValueKey('engadir-dia'),
+        onPressed: _engadirDia,
+        icon: const Icon(Icons.add_circle_outline),
+        label: const Text('Engadir dose ou control'),
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(double.infinity, 50),
+          foregroundColor: _verde,
+          side: const BorderSide(color: _verde),
+          textStyle: const TextStyle(fontWeight: FontWeight.bold),
         ),
-      );
-    }),
+      ),
+    ],
   );
 
   Widget _proximaVisita() {
@@ -632,6 +649,12 @@ class _RevisionPautaViewState extends State<_RevisionPautaView> {
 
   Future<void> _escollerDose(int indice) async {
     final actual = _analise.calendario[indice].dose ?? '';
+    final novaDose = await _pedirDose(actual: actual);
+    if (novaDose == null || !mounted) return;
+    _vm.actualizarDia(indice, dose: novaDose);
+  }
+
+  Future<String?> _pedirDose({String actual = ''}) async {
     final controlador = TextEditingController(text: actual);
     const habituais = ['0', '1/4', '1/2', '3/4', '1', '1+1/4', '1+1/2'];
     final novaDose = await showModalBottomSheet<String>(
@@ -700,8 +723,68 @@ class _RevisionPautaViewState extends State<_RevisionPautaView> {
       ),
     );
     controlador.dispose();
-    if (novaDose == null || !mounted) return;
-    _vm.actualizarDia(indice, dose: novaDose);
+    return novaDose;
+  }
+
+  Future<void> _engadirDia() async {
+    final ultimaData = _analise.calendario.isEmpty
+        ? DateTime.now()
+        : RevisionPauta.interpretarData(_analise.calendario.last.data) ??
+              DateTime.now();
+    final data = await showDatePicker(
+      context: context,
+      initialDate: ultimaData,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+      helpText: 'Selecciona a data que falta',
+      cancelText: 'Cancelar',
+      confirmText: 'Continuar',
+    );
+    if (data == null || !mounted) return;
+
+    final eControl = await showModalBottomSheet<bool>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Que queres engadir?',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 14),
+              ListTile(
+                leading: const Icon(Icons.medication_outlined),
+                title: const Text('Unha dose'),
+                subtitle: const Text('Permite indicar a cantidade da toma.'),
+                onTap: () => Navigator.pop(context, false),
+              ),
+              ListTile(
+                leading: const Icon(Icons.event_available_outlined),
+                title: const Text('Un día de control'),
+                subtitle: const Text('Rexístrase sen dose asociada.'),
+                onTap: () => Navigator.pop(context, true),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (eControl == null || !mounted) return;
+
+    String? dose;
+    if (!eControl) {
+      dose = await _pedirDose();
+      if (dose == null || !mounted) return;
+    }
+
+    if (!_vm.engadirDia(data: data, dose: dose, eControl: eControl)) {
+      _mostrarErro(_vm.erro!);
+    }
   }
 
   void _revisarCorreccions() {

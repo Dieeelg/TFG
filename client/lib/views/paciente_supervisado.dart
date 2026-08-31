@@ -4,10 +4,10 @@ import 'package:provider/provider.dart';
 import 'camara/captura_informe.dart';
 import '../modelos_vista/paciente_supervisado.dart';
 
-class CaregiverPatientScreen extends StatelessWidget {
+class PacienteSupervisadoScreen extends StatelessWidget {
   final Map<String, dynamic> paciente;
   final int numero;
-  const CaregiverPatientScreen({
+  const PacienteSupervisadoScreen({
     super.key,
     required this.paciente,
     required this.numero,
@@ -16,20 +16,21 @@ class CaregiverPatientScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ChangeNotifierProvider(
     create: (_) =>
-        SupervisedPatientViewModel(paciente: paciente, numero: numero)
+        PacienteSupervisadoViewModel(paciente: paciente, numero: numero)
           ..iniciar(),
-    child: const _CaregiverPatientView(),
+    child: const _PacienteSupervisadoView(),
   );
 }
 
-class _CaregiverPatientView extends StatefulWidget {
-  const _CaregiverPatientView();
+class _PacienteSupervisadoView extends StatefulWidget {
+  const _PacienteSupervisadoView();
 
   @override
-  State<_CaregiverPatientView> createState() => _CaregiverPatientViewState();
+  State<_PacienteSupervisadoView> createState() =>
+      _PacienteSupervisadoViewState();
 }
 
-class _CaregiverPatientViewState extends State<_CaregiverPatientView>
+class _PacienteSupervisadoViewState extends State<_PacienteSupervisadoView>
     with WidgetsBindingObserver {
   @override
   void initState() {
@@ -40,7 +41,7 @@ class _CaregiverPatientViewState extends State<_CaregiverPatientView>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      context.read<SupervisedPatientViewModel>().recargar();
+      context.read<PacienteSupervisadoViewModel>().recargar();
     }
   }
 
@@ -52,7 +53,7 @@ class _CaregiverPatientViewState extends State<_CaregiverPatientView>
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<SupervisedPatientViewModel>();
+    final vm = context.watch<PacienteSupervisadoViewModel>();
     final d = vm.datos;
 
     return Scaffold(
@@ -201,7 +202,10 @@ class _CaregiverPatientViewState extends State<_CaregiverPatientView>
             child: valores.isEmpty
                 ? const Center(child: Text('Non hai datos suficientes'))
                 : CustomPaint(
-                    painter: _CareChartPainter(valores, barras: barras),
+                    painter: _GraficaPacienteSupervisadoPainter(
+                      valores,
+                      barras: barras,
+                    ),
                   ),
           ),
         ],
@@ -210,10 +214,13 @@ class _CaregiverPatientViewState extends State<_CaregiverPatientView>
   );
 }
 
-class _CareChartPainter extends CustomPainter {
+class _GraficaPacienteSupervisadoPainter extends CustomPainter {
   final List<double> valores;
   final bool barras;
-  const _CareChartPainter(this.valores, {required this.barras});
+  const _GraficaPacienteSupervisadoPainter(
+    this.valores, {
+    required this.barras,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -281,5 +288,7 @@ class _CareChartPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _CareChartPainter oldDelegate) => true;
+  bool shouldRepaint(
+    covariant _GraficaPacienteSupervisadoPainter oldDelegate,
+  ) => true;
 }

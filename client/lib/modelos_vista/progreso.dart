@@ -4,20 +4,20 @@ import '../modelos/cabeceira.dart';
 import '../modelos/historico.dart';
 import '../servizos/servizo_base_datos.dart';
 
-class ProgressViewModel extends ChangeNotifier {
+class ProgresoViewModel extends ChangeNotifier {
   final Future<List<ItemHistoricoModel>> Function() _obterHistorico;
   final Future<CabeceiraModel?> Function() _obterCabeceira;
   final Future<List<Map<String, Object?>>> Function() _obterCumprimento;
 
-  ProgressViewModel({DatabaseService? database})
+  ProgresoViewModel({ServizoBaseDatos? database})
     : this.conDependencias(
-        obterHistorico: (database ?? DatabaseService()).obterHistorico,
-        obterCabeceira: (database ?? DatabaseService()).obterCabeceira,
+        obterHistorico: (database ?? ServizoBaseDatos()).obterHistorico,
+        obterCabeceira: (database ?? ServizoBaseDatos()).obterCabeceira,
         obterCumprimento:
-            (database ?? DatabaseService()).obterRexistrosCumprimento,
+            (database ?? ServizoBaseDatos()).obterRexistrosCumprimento,
       );
 
-  ProgressViewModel.conDependencias({
+  ProgresoViewModel.conDependencias({
     required Future<List<ItemHistoricoModel>> Function() obterHistorico,
     required Future<CabeceiraModel?> Function() obterCabeceira,
     required Future<List<Map<String, Object?>>> Function() obterCumprimento,

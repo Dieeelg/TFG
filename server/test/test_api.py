@@ -39,11 +39,11 @@ class TestSintromAPI(unittest.TestCase):
         # Eliminamos os erros de test anteriores
         self.mock_azure_client.begin_analyze_document.side_effect = None
 
-    def test_endpoint_health(self):
+    def test_endpoint_estado(self):
         """
-        Comprobación de que o endpoint /health funciona correctamente e devolve o que ten que devolver
+        Comprobación de que o endpoint /estado funciona correctamente e devolve o que ten que devolver
         """
-        resposta = self.client.get("/health")
+        resposta = self.client.get("/estado")
         self.assertEqual(resposta.status_code, 200)
         self.assertEqual(resposta.json()["status"], "OK")
 

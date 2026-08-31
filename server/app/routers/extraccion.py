@@ -4,9 +4,9 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
 from azure.ai.documentintelligence import DocumentIntelligenceClient
 from azure.core.exceptions import HttpResponseError
 
-from app.dependencies import get_azure_client
-from app.schemas.models import AnalisisResponse, ErrorResponse, CabeceiraResponse, DoseDia, ItemHistorico, MetadatosResponse
-from app.internal.logic import extraer_data, calcular_confianza_media, parsear_data, parse_dose_cell, \
+from app.dependencies import obter_cliente_azure
+from app.schemas.models import AnaliseResponse, ErrorResponse, CabeceiraResponse, DoseDia, ItemHistorico, MetadatosResponse
+from app.internal.logic import extraer_data, calcular_confianza_media, parsear_data, parsear_cela_dose, \
     extraer_dose_semanal
 from app.internal.constants import MODEL_ID, DOSE_COLS, INR_MIN_LOGICO, INR_MAX_LOGICO
 from app.internal.preprocesamento import preprocesar_documento
@@ -19,7 +19,7 @@ router = APIRouter(
 
 @router.post("/",
     response_description="Resultado da extracción estruturada do informe",
-    response_model = AnalisisResponse,
+    response_model = AnaliseResponse,
     summary= "Iniciar a extracción de datos do informe de Sintrom",
     description="Recibe unha imaxe dun informe de tratamento anticoagulante oral (Sintrom), extrae os datos empregando Azure Document Intelligence e devolve a información de xeito estruturado",
      responses={
@@ -65,7 +65,7 @@ router = APIRouter(
     tags=["Procesamento de Informes"]
 )
 async def iniciar_extraccion(file: UploadFile = File(... ,description="Imaxe ou PDF do informe de Sintrom (JPEG, PNG, HEIC ou PDF)"),
-                             client: DocumentIntelligenceClient = Depends(get_azure_client) ):
+                             client: DocumentIntelligenceClient = Depends(obter_cliente_azure) ):
     """
     Endpoint que recibe unha foto dun informe de sintrom, extrae os datos con Azure
     e devolve un JSON coa información relevante limpa para a nosa app.
@@ -172,7 +172,7 @@ async def iniciar_extraccion(file: UploadFile = File(... ,description="Imaxe ou 
                     for dia_sem in DOSE_COLS:
                         celda = fila.value_object.get(dia_sem)
                         if celda:
-                            datos = parse_dose_cell(celda.content, ano_actual, mes_actual,dt_prox)
+                            datos = parsear_cela_dose(celda.content, ano_actual, mes_actual,dt_prox)
                             if datos:
                                 if datos["control"] and dt_prox :
                                     data_celda = parsear_data(datos["data"])
@@ -257,7 +257,7 @@ async def iniciar_extraccion(file: UploadFile = File(... ,description="Imaxe ou 
                     detail="Erro co INR. Revisa que sexa lexible na imaxe"
                 )
 
-        return AnalisisResponse(
+        return AnaliseResponse(
         cabeceira=CabeceiraResponse(
                 dataInforme=data_informe_limpa,
                 inr=get_text("inr"),

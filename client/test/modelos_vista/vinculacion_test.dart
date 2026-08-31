@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tfg_sintrom/modelos_vista/autenticacion/vinculacion_coidador.dart';
+import 'package:tfg_sintrom/modelos_vista/autenticacion/vinculacion_supervisor.dart';
 import 'package:tfg_sintrom/modelos_vista/autenticacion/vinculacion_paciente.dart';
 import 'package:tfg_sintrom/servizos/servizo_cifrado_p2p.dart';
 
@@ -50,7 +50,8 @@ void main() {
           ler: (_) async => null,
         );
         await senToken.xerarDatosVinculacion();
-        expect(senToken.datosQR, 'erro_datos');
+        expect(senToken.datosQR, isNull);
+        expect(senToken.erro, contains('Comproba a conexión'));
 
         final erro = VinculacionPacienteViewModel.conDependencias(
           obterUid: () async => 'uid',
@@ -60,7 +61,8 @@ void main() {
           ler: (_) async => null,
         );
         await erro.xerarDatosVinculacion();
-        expect(erro.datosQR, 'erro_datos');
+        expect(erro.datosQR, isNull);
+        expect(erro.erro, contains('Comproba a conexión'));
         senUid.dispose();
         senToken.dispose();
         erro.dispose();
@@ -78,17 +80,17 @@ void main() {
       );
 
       await vm.comprobarEstadoVinculacion();
-      expect(vm.tenCoidador, isFalse);
-      token['token_coidador'] = 'token-coidador';
+      expect(vm.tenSupervisor, isFalse);
+      token['token_supervisor'] = 'token-supervisor';
       await vm.comprobarEstadoVinculacion();
-      expect(vm.tenCoidador, isTrue);
+      expect(vm.tenSupervisor, isTrue);
       await vm.comprobarEstadoVinculacion();
-      expect(vm.tenCoidador, isTrue);
+      expect(vm.tenSupervisor, isTrue);
       vm.dispose();
     });
   });
 
-  group('VinculacionCoidadorViewModel', () {
+  group('VinculacionSupervisorViewModel', () {
     const datosQr = DatosQrVinculacion(
       id: 'v1',
       uidPaciente: 'paciente-1',
@@ -100,7 +102,7 @@ void main() {
     late Map<String, String> storage;
     late String? payloadClaro;
 
-    VinculacionCoidadorViewModel crearVm({
+    VinculacionSupervisorViewModel crearVm({
       Future<bool> Function()? comprobarApi,
       DatosQrVinculacion Function(String)? lerCodigo,
       Future<String?> Function()? obterToken,
@@ -110,12 +112,12 @@ void main() {
         required String tipoAviso,
       })?
       enviar,
-    }) => VinculacionCoidadorViewModel.conDependencias(
+    }) => VinculacionSupervisorViewModel.conDependencias(
       comprobarApi: comprobarApi ?? () async => true,
       lerCodigo: lerCodigo ?? (_) => datosQr,
       xerarClave: () async => 'clave-permanente',
-      obterToken: obterToken ?? () async => 'token-coidador',
-      obterUid: () async => 'coidador-1',
+      obterToken: obterToken ?? () async => 'token-supervisor',
+      obterUid: () async => 'supervisor-1',
       cifrarPayload:
           ({required vinculacion, required tipoAviso, required payload}) async {
             payloadClaro = payload;
@@ -155,8 +157,8 @@ void main() {
       expect(vm.escaneando, isFalse);
       expect(vm.erro, isNull);
       expect(jsonDecode(payloadClaro!), {
-        'token': 'token-coidador',
-        'coidadorUid': 'coidador-1',
+        'token': 'token-supervisor',
+        'supervisorUid': 'supervisor-1',
         'clavePermanente': 'clave-permanente',
       });
       expect(eventos, [
@@ -165,7 +167,7 @@ void main() {
         'paciente:paciente-1:token-paciente',
       ]);
       expect(storage['configuracion_finalizada'], 'true');
-      expect(storage['rol_usuario'], 'COIDADOR');
+      expect(storage['rol_usuario'], 'SUPERVISOR');
     });
 
     test('detense se a API non responde ou falta token propio', () async {

@@ -1,22 +1,24 @@
-import 'package:flutter/material.dart'; // Vinculación desde o coidador.
+import 'package:flutter/material.dart'; // Vinculación desde o supervisor.
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
 import 'vinculacion_exitosa.dart';
-import '../../modelos_vista/autenticacion/vinculacion_coidador.dart';
+import '../../modelos_vista/autenticacion/vinculacion_supervisor.dart';
 
-class VincularCoidadorScreen extends StatefulWidget {
-  const VincularCoidadorScreen({super.key});
+class VinculacionSupervisorScreen extends StatefulWidget {
+  const VinculacionSupervisorScreen({super.key});
 
   @override
-  State<VincularCoidadorScreen> createState() => _VincularCoidadorScreenState();
+  State<VinculacionSupervisorScreen> createState() =>
+      _VinculacionSupervisorScreenState();
 }
 
-class _VincularCoidadorScreenState extends State<VincularCoidadorScreen> {
+class _VinculacionSupervisorScreenState
+    extends State<VinculacionSupervisorScreen> {
   final MobileScannerController controller = MobileScannerController();
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<VinculacionCoidadorViewModel>();
+    final vm = context.watch<VinculacionSupervisorViewModel>();
 
     return Scaffold(
       appBar: AppBar(
@@ -38,17 +40,25 @@ class _VincularCoidadorScreenState extends State<VincularCoidadorScreen> {
                   final exito = await vm.vincularPaciente(barcode.rawValue!);
 
                   if (exito && context.mounted) {
-                    _mostrarMensaxe(context, "Vinculación completada con éxito", Colors.green);
+                    _mostrarMensaxe(
+                      context,
+                      "Vinculación completada con éxito",
+                      Colors.green,
+                    );
                     // En lugar de un SnackBar, imos á nova pantalla de éxito
                     Navigator.pushReplacement(
                       context,
-                      MaterialPageRoute(builder: (context) => const VinculacionExitosaScreen()),
+                      MaterialPageRoute(
+                        builder: (context) => const VinculacionExitosaScreen(),
+                      ),
                     );
                   } else if (vm.erro != null && context.mounted) {
                     // Se hai erro, mostramos o aviso pero deixamos seguir intentando
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                          content: Text(vm.erro!), backgroundColor: Colors.red),
+                        content: Text(vm.erro!),
+                        backgroundColor: Colors.red,
+                      ),
                     );
                   }
                 }
@@ -103,9 +113,9 @@ class _VincularCoidadorScreenState extends State<VincularCoidadorScreen> {
   }
 
   void _mostrarMensaxe(BuildContext context, String texto, Color cor) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(texto), backgroundColor: cor),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(texto), backgroundColor: cor));
   }
 
   @override

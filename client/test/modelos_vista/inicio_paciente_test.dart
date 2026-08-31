@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tfg_sintrom/modelos/cabeceira.dart';
 import 'package:tfg_sintrom/modelos/dose_dia.dart';
-import 'package:tfg_sintrom/modelos_vista/inicio.dart';
+import 'package:tfg_sintrom/modelos_vista/inicio_paciente.dart';
 
 void main() {
   late Map<String, String> storage;
@@ -23,13 +23,13 @@ void main() {
         diaSemanaTexto: 'VENRES',
       );
 
-  HomeViewModel crearVm({
+  InicioPacienteViewModel crearVm({
     Future<List<String>> Function()? pechar,
     Future<List<DoseDiaModel>> Function()? obterPauta,
     Future<Map<String, String>> Function()? obterEstados,
     Future<CabeceiraModel?> Function()? obterCabeceira,
     Future<Map<String, dynamic>> Function(String)? buscarCentro,
-  }) => HomeViewModel.conDependencias(
+  }) => InicioPacienteViewModel.conDependencias(
     ler: (key) async => storage[key],
     pecharTomasVencidas: pechar ?? () async => [],
     obterPauta: obterPauta ?? () async => pauta,
@@ -48,7 +48,7 @@ void main() {
           );
           estados[data] = foraDeHora ? 'TOMADA_FORA_HORA' : 'TOMADA';
         },
-    notificarCoidador: (tipo) async => eventos.add('notificar:$tipo'),
+    notificarSupervisores: (tipo) async => eventos.add('notificar:$tipo'),
     cancelarEsquecemento: ({required identificador}) async {
       eventos.add('cancelar:$identificador');
     },

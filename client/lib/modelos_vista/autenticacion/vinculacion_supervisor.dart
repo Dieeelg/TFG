@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart'; // Estado da vinculación do coidador.
+import 'package:flutter/material.dart'; // Estado da vinculación do supervisor.
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../servizos/servizo_api.dart';
@@ -7,7 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:convert';
 import '../../servizos/servizo_cifrado_p2p.dart';
 
-class VinculacionCoidadorViewModel extends ChangeNotifier {
+class VinculacionSupervisorViewModel extends ChangeNotifier {
   final Future<bool> Function() _comprobarApi;
   final DatosQrVinculacion Function(String codigo) _lerCodigo;
   final Future<String> Function() _xerarClave;
@@ -30,15 +30,15 @@ class VinculacionCoidadorViewModel extends ChangeNotifier {
   _gardarPaciente;
   final Future<void> Function(String key, String value) _escribir;
 
-  VinculacionCoidadorViewModel({
-    ApiService? api,
+  VinculacionSupervisorViewModel({
+    ServizoApi? api,
     FlutterSecureStorage storage = const FlutterSecureStorage(),
     ServizoCifradoP2P? cifrado,
-    DatabaseService? database,
+    ServizoBaseDatos? database,
     FirebaseMessaging? mensaxeria,
     FirebaseAuth? autenticacion,
   }) : this.conDependencias(
-         comprobarApi: (api ?? ApiService()).checkHealth,
+         comprobarApi: (api ?? ServizoApi()).comprobarEstado,
          lerCodigo: (cifrado ?? ServizoCifradoP2P()).lerCodigoVinculacion,
          xerarClave: (cifrado ?? ServizoCifradoP2P()).xerarClaveBase64,
          obterToken: () =>
@@ -46,17 +46,17 @@ class VinculacionCoidadorViewModel extends ChangeNotifier {
          obterUid: () async =>
              (autenticacion ?? FirebaseAuth.instance).currentUser?.uid,
          cifrarPayload: (cifrado ?? ServizoCifradoP2P()).cifrarPayload,
-         enviarNotificacion: (api ?? ApiService()).enviarNotificacion,
+         enviarNotificacion: (api ?? ServizoApi()).enviarNotificacion,
          gardarVinculacion: (cifrado ?? ServizoCifradoP2P()).gardarVinculacion,
          gardarPaciente: ({required uid, required token}) =>
-             (database ?? DatabaseService()).gardarPacienteCoidador(
+             (database ?? ServizoBaseDatos()).gardarPacienteSupervisor(
                uid: uid,
                token: token,
              ),
          escribir: (key, value) => storage.write(key: key, value: value),
        );
 
-  VinculacionCoidadorViewModel.conDependencias({
+  VinculacionSupervisorViewModel.conDependencias({
     required Future<bool> Function() comprobarApi,
     required DatosQrVinculacion Function(String codigo) lerCodigo,
     required Future<String> Function() xerarClave,
@@ -113,7 +113,7 @@ class VinculacionCoidadorViewModel extends ChangeNotifier {
         claveBase64: await _xerarClave(),
       );
 
-      //Ocoidador pídelle a Firebase cal é o seu token.
+      //Osupervisor pídelle a Firebase cal é o seu token.
       String? oMeuToken = await _obterToken();
       if (oMeuToken == null || oMeuToken.isEmpty) {
         _erro = "Non se puido identificar este dispositivo.";
@@ -126,7 +126,7 @@ class VinculacionCoidadorViewModel extends ChangeNotifier {
         tipoAviso: tipoAviso,
         payload: jsonEncode({
           'token': oMeuToken,
-          'coidadorUid': await _obterUid(),
+          'supervisorUid': await _obterUid(),
           'clavePermanente': vinculacion.claveBase64,
         }),
       );
@@ -149,7 +149,7 @@ class VinculacionCoidadorViewModel extends ChangeNotifier {
           token: datosQr.tokenPaciente,
         );
         await _escribir('configuracion_finalizada', 'true');
-        await _escribir('rol_usuario', 'COIDADOR');
+        await _escribir('rol_usuario', 'SUPERVISOR');
       }
 
       return exitoSaudo;

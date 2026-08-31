@@ -2,25 +2,25 @@ import 'package:flutter/material.dart'; // Inicio da configuración.
 import 'package:provider/provider.dart';
 import '../../modelos_vista/autenticacion/configuracion_inicial.dart';
 import 'vinculacion_paciente.dart';
-import 'vinculacion_coidador.dart';
+import 'vinculacion_supervisor.dart';
 
-class SetupScreen extends StatelessWidget {
-  const SetupScreen({super.key});
+class ConfiguracionInicialScreen extends StatelessWidget {
+  const ConfiguracionInicialScreen({super.key});
 
   Future<void> _manexarSeleccion(BuildContext context, bool esPaciente) async {
-    final vm = context.read<SetupViewModel>();
+    final vm = context.read<ConfiguracionInicialViewModel>();
 
     final resultado = await vm.autenticar(esPaciente: esPaciente);
 
     if (!context.mounted) return;
 
-    if (resultado == AuthResult.exito) {
+    if (resultado == ResultadoAutenticacion.exito) {
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => esPaciente
-              ? const VinculacionScreen()
-              : const VincularCoidadorScreen(),
+              ? const VinculacionPacienteScreen()
+              : const VinculacionSupervisorScreen(),
         ),
       );
     } else {
@@ -32,7 +32,7 @@ class SetupScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final setupVM = context.watch<SetupViewModel>();
+    final setupVM = context.watch<ConfiguracionInicialViewModel>();
 
     return Scaffold(
       backgroundColor: Colors.white,

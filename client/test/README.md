@@ -5,7 +5,7 @@ A suite combina varias capas para non depender unicamente de tests unitarios:
 - **Modelos e regras de dominio:** conversión do JSON do OCR, datas, doses,
   revisión da pauta e planificación de recordatorios.
 - **ViewModels:** estados de carga, éxito e erro, concorrencia, preferencias,
-  captura de informes e sincronización paciente–coidador con dependencias
+  captura de informes e sincronización paciente–supervisor con dependencias
   substituídas por dobres deterministas.
 - **Servizos:** API HTTP con `MockClient`, cifrado real AES-GCM e SQLite real
   en memoria mediante `sqflite_common_ffi`.

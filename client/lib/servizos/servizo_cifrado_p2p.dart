@@ -240,8 +240,8 @@ class ServizoCifradoP2P {
 
   Future<void> confirmarVinculacionPendente({
     required String id,
-    required String uidCoidador,
-    required String tokenCoidador,
+    required String uidSupervisor,
+    required String tokenSupervisor,
     required String clavePermanenteBase64,
   }) async {
     final clave = await _storage.read(key: '$_prefixoPendente$id');
@@ -259,10 +259,10 @@ class ServizoCifradoP2P {
     await gardarVinculacion(
       VinculacionP2P(
         id: id,
-        uidRemoto: uidCoidador,
-        tokenRemoto: tokenCoidador,
+        uidRemoto: uidSupervisor,
+        tokenRemoto: tokenSupervisor,
         claveBase64: clavePermanenteBase64,
-        rolRemoto: 'COIDADOR',
+        rolRemoto: 'SUPERVISOR',
       ),
     );
     await _storage.delete(key: '$_prefixoPendente$id');

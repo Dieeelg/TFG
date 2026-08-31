@@ -1,15 +1,15 @@
 /// A diferenza de `DoseDiaModel` (que contén a receita médica estática da API),
-/// `PautaToma` engade a xestión do [estado] interactivo da dose.
+/// `PautaTomaModel` engade a xestión do [estado] interactivo da dose.
 /// Utilízase na pantalla principal para que a aplicación poida rexistrar
 /// se o paciente xa tomou a pastilla hoxe, se está pendente, ou se a saltou.
-class PautaToma {
+class PautaTomaModel {
   final String data;
   final String dia;
   final String dose;
   final String estado; // PENDENTE, TOMADA, TOMADA_FORA_HORA ou NON_TOMADA
   final bool eControl;
 
-  PautaToma({
+  PautaTomaModel({
     required this.data,
     required this.dia,
     required this.dose,

@@ -1,7 +1,9 @@
-class DoseDiaModel{ // Dose pautada para un día.
+class DoseDiaModel {
+  // Dose pautada para un día.
   final String data;
   final int dia;
-  final String? dose; //Recordemos que dose pode ser null por que o día do control non ten dose.
+  final String?
+  dose; //Recordemos que dose pode ser null por que o día do control non ten dose.
   final String accion;
   final bool eControl;
   final String diaSemanaTexto;

@@ -4,24 +4,43 @@ import '../modelos/cabeceira.dart';
 import '../modelos/dose_dia.dart';
 import '../servizos/servizo_base_datos.dart';
 
-class CalendarViewModel extends ChangeNotifier {
+class DiaCalendario {
+  const DiaCalendario({required this.data, this.dose});
+
+  final DateTime data;
+  final DoseDiaModel? dose;
+}
+
+class MesCalendario {
+  const MesCalendario({
+    required this.ano,
+    required this.mes,
+    required this.celas,
+  });
+
+  final int ano;
+  final int mes;
+  final List<DiaCalendario?> celas;
+}
+
+class CalendarioViewModel extends ChangeNotifier {
   final Future<void> Function() _pecharTomasVencidas;
   final Future<List<DoseDiaModel>> Function() _obterPauta;
   final Future<Map<String, String>> Function() _obterEstados;
   final Future<CabeceiraModel?> Function() _obterCabeceira;
   final DateTime Function() _agora;
 
-  CalendarViewModel({DatabaseService? database, DateTime Function()? agora})
+  CalendarioViewModel({ServizoBaseDatos? database, DateTime Function()? agora})
     : this.conDependencias(
         pecharTomasVencidas:
-            (database ?? DatabaseService()).pecharTomasVencidas,
-        obterPauta: (database ?? DatabaseService()).obterPauta,
-        obterEstados: (database ?? DatabaseService()).obterEstados,
-        obterCabeceira: (database ?? DatabaseService()).obterCabeceira,
+            (database ?? ServizoBaseDatos()).pecharTomasVencidas,
+        obterPauta: (database ?? ServizoBaseDatos()).obterPauta,
+        obterEstados: (database ?? ServizoBaseDatos()).obterEstados,
+        obterCabeceira: (database ?? ServizoBaseDatos()).obterCabeceira,
         agora: agora,
       );
 
-  CalendarViewModel.conDependencias({
+  CalendarioViewModel.conDependencias({
     required Future<void> Function() pecharTomasVencidas,
     required Future<List<DoseDiaModel>> Function() obterPauta,
     required Future<Map<String, String>> Function() obterEstados,
@@ -44,6 +63,38 @@ class CalendarViewModel extends ChangeNotifier {
   String? get proximaVisita => _proximaVisita;
   bool get cargando => _cargando;
   String? get erro => _erro;
+
+  List<MesCalendario> get meses {
+    final dosesPorData = <String, DoseDiaModel>{};
+    final meses = <(int, int)>{};
+    for (final dose in _pauta) {
+      final data = DateTime.tryParse(dose.data);
+      if (data == null) continue;
+      dosesPorData[dose.data] = dose;
+      meses.add((data.year, data.month));
+    }
+
+    final mesesOrdenados = meses.toList()
+      ..sort(
+        (a, b) => a.$1 != b.$1 ? a.$1.compareTo(b.$1) : a.$2.compareTo(b.$2),
+      );
+    return mesesOrdenados.map((chave) {
+      final primeiroDia = DateTime(chave.$1, chave.$2);
+      final numeroDias = DateTime(chave.$1, chave.$2 + 1, 0).day;
+      final celas = <DiaCalendario?>[
+        ...List<DiaCalendario?>.filled(primeiroDia.weekday - 1, null),
+        ...List.generate(numeroDias, (indice) {
+          final data = DateTime(chave.$1, chave.$2, indice + 1);
+          final iso = _formatoIso(data);
+          return DiaCalendario(data: data, dose: dosesPorData[iso]);
+        }),
+      ];
+      while (celas.length % 7 != 0) {
+        celas.add(null);
+      }
+      return MesCalendario(ano: chave.$1, mes: chave.$2, celas: celas);
+    }).toList();
+  }
 
   String get hoxe => _agora().toIso8601String().substring(0, 10);
 
@@ -106,4 +157,9 @@ class CalendarViewModel extends ChangeNotifier {
 
   bool _eTomada(String? estado) =>
       estado == 'TOMADA' || estado == 'TOMADA_FORA_HORA';
+
+  String _formatoIso(DateTime data) =>
+      '${data.year.toString().padLeft(4, '0')}-'
+      '${data.month.toString().padLeft(2, '0')}-'
+      '${data.day.toString().padLeft(2, '0')}';
 }

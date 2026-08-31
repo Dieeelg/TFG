@@ -16,7 +16,7 @@ void main() {
 
   test('carga a pauta e calcula cumprimento excluíndo controis', () async {
     var pechouVencidas = false;
-    final vm = CalendarViewModel.conDependencias(
+    final vm = CalendarioViewModel.conDependencias(
       pecharTomasVencidas: () async => pechouVencidas = true,
       obterPauta: () async => [
         dia('2026-08-18'),
@@ -43,7 +43,7 @@ void main() {
   });
 
   test('expón un erro estable se falla a fonte de datos', () async {
-    final vm = CalendarViewModel.conDependencias(
+    final vm = CalendarioViewModel.conDependencias(
       pecharTomasVencidas: () async {},
       obterPauta: () async => throw Exception('base de datos non dispoñible'),
       obterEstados: () async => {},
@@ -57,8 +57,8 @@ void main() {
   });
 
   test('interpreta citas ISO, hoxe, pasadas e non válidas', () async {
-    Future<CalendarViewModel> conCita(String? cita) async {
-      final vm = CalendarViewModel.conDependencias(
+    Future<CalendarioViewModel> conCita(String? cita) async {
+      final vm = CalendarioViewModel.conDependencias(
         pecharTomasVencidas: () async {},
         obterPauta: () async => [],
         obterEstados: () async => {},
@@ -78,7 +78,7 @@ void main() {
   test(
     'non conta controis, dose cero nin días futuros como esquecidos',
     () async {
-      final vm = CalendarViewModel.conDependencias(
+      final vm = CalendarioViewModel.conDependencias(
         pecharTomasVencidas: () async {},
         obterPauta: () async => [
           dia('2026-08-19', dose: '0'),
@@ -97,4 +97,32 @@ void main() {
       expect(vm.estadoDe('descoñecido'), isNull);
     },
   );
+
+  test('aliña cada mes co luns e separa os cambios de mes', () async {
+    final vm = CalendarioViewModel.conDependencias(
+      pecharTomasVencidas: () async {},
+      obterPauta: () async => [
+        dia('2026-08-01'),
+        dia('2026-08-31'),
+        dia('2026-09-01'),
+      ],
+      obterEstados: () async => {},
+      obterCabeceira: () async => null,
+    );
+
+    await vm.cargar();
+
+    expect(vm.meses, hasLength(2));
+    final agosto = vm.meses.first;
+    expect(agosto.mes, 8);
+    expect(agosto.celas.take(5), everyElement(isNull));
+    expect(agosto.celas[5]?.data.day, 1);
+    expect(agosto.celas[35]?.data.day, 31);
+    expect(agosto.celas[35]?.dose?.data, '2026-08-31');
+
+    final setembro = vm.meses.last;
+    expect(setembro.celas.first, isNull);
+    expect(setembro.celas[1]?.data.day, 1);
+    expect(setembro.celas[1]?.dose?.data, '2026-09-01');
+  });
 }

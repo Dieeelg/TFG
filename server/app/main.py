@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.dependencies import lifespan
 from app.routers.extraccion import router as extraccion_router
-from app.routers.system import router as system_router
+from app.routers.estado import router as estado_router
 from app.routers.notificar import router as notificar_router
 from app.routers.centros import router as centros_router
 from app.routers.preprocesamento import router as preprocesamento_router
@@ -43,7 +43,7 @@ app.add_middleware(
 )
 
 app.include_router(extraccion_router)
-app.include_router(system_router)
+app.include_router(estado_router)
 app.include_router(notificar_router)
 app.include_router(centros_router)
 app.include_router(preprocesamento_router)

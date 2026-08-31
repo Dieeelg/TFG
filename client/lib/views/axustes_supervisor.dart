@@ -1,28 +1,28 @@
-import 'package:flutter/material.dart'; // Axustes do coidador.
+import 'package:flutter/material.dart'; // Axustes do supervisor.
 import 'package:provider/provider.dart';
-import '../modelos_vista/axustes_coidador.dart';
+import '../modelos_vista/axustes_supervisor.dart';
 
-class AxustesCoidadorScreen extends StatelessWidget {
-  const AxustesCoidadorScreen({super.key, this.viewModel});
+class AxustesSupervisorScreen extends StatelessWidget {
+  const AxustesSupervisorScreen({super.key, this.viewModel});
 
-  final CaregiverSettingsViewModel? viewModel;
+  final AxustesSupervisorViewModel? viewModel;
 
   @override
   Widget build(BuildContext context) => ChangeNotifierProvider(
-    create: (_) => viewModel ?? (CaregiverSettingsViewModel()..cargar()),
-    child: const _AxustesCoidadorView(),
+    create: (_) => viewModel ?? (AxustesSupervisorViewModel()..cargar()),
+    child: const _AxustesSupervisorView(),
   );
 }
 
-class _AxustesCoidadorView extends StatelessWidget {
-  const _AxustesCoidadorView();
+class _AxustesSupervisorView extends StatelessWidget {
+  const _AxustesSupervisorView();
 
   Future<void> _eliminar(
     BuildContext context,
     Map<String, dynamic> paciente,
     int indice,
   ) async {
-    final vm = context.read<CaregiverSettingsViewModel>();
+    final vm = context.read<AxustesSupervisorViewModel>();
     final datos = paciente['datos'] as Map<String, dynamic>;
     final nome = (datos['nome'] as String?)?.trim();
     final confirmar = await showDialog<bool>(
@@ -61,12 +61,12 @@ class _AxustesCoidadorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<CaregiverSettingsViewModel>();
+    final vm = context.watch<AxustesSupervisorViewModel>();
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
         title: const Text(
-          'Axustes do coidador',
+          'Axustes do supervisor',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),

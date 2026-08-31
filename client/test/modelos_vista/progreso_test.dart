@@ -5,7 +5,7 @@ import 'package:tfg_sintrom/modelos_vista/progreso.dart';
 
 void main() {
   test('normaliza valores e calcula as métricas de puntualidade', () async {
-    final vm = ProgressViewModel.conDependencias(
+    final vm = ProgresoViewModel.conDependencias(
       obterHistorico: () async => [
         ItemHistoricoModel(inr: '2,4', dose: '13,5 mg'),
       ],
@@ -28,16 +28,16 @@ void main() {
   });
 
   test('numero rexeita texto sen unha cantidade', () {
-    expect(ProgressViewModel.numero(null), isNull);
-    expect(ProgressViewModel.numero('sen datos'), isNull);
-    expect(ProgressViewModel.numero('1/2'), 0.5);
-    expect(ProgressViewModel.numero('1+1/2 mg'), 1.5);
-    expect(ProgressViewModel.numero('1/0'), isNull);
-    expect(ProgressViewModel.numero('-2,5 mg'), -2.5);
+    expect(ProgresoViewModel.numero(null), isNull);
+    expect(ProgresoViewModel.numero('sen datos'), isNull);
+    expect(ProgresoViewModel.numero('1/2'), 0.5);
+    expect(ProgresoViewModel.numero('1+1/2 mg'), 1.5);
+    expect(ProgresoViewModel.numero('1/0'), isNull);
+    expect(ProgresoViewModel.numero('-2,5 mg'), -2.5);
   });
 
   test('sen rexistros non inventa unha desviación media', () async {
-    final vm = ProgressViewModel.conDependencias(
+    final vm = ProgresoViewModel.conDependencias(
       obterHistorico: () async => [],
       obterCabeceira: () async => null,
       obterCumprimento: () async => [],
@@ -51,7 +51,7 @@ void main() {
   });
 
   test('expón erro e recupera o estado de carga', () async {
-    final vm = ProgressViewModel.conDependencias(
+    final vm = ProgresoViewModel.conDependencias(
       obterHistorico: () async => throw Exception('sqlite'),
       obterCabeceira: () async => null,
       obterCumprimento: () async => [],
