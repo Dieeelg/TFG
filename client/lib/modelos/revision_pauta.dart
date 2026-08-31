@@ -131,6 +131,34 @@ class RevisionPauta {
     );
   }
 
+  static AnaliseModel engadirDia(
+    AnaliseModel analise, {
+    required DateTime data,
+    String? dose,
+    required bool eControl,
+  }) {
+    final doseNormalizada = eControl ? null : (dose ?? '').trim();
+    final dia = DoseDiaModel(
+      data: formatoIso(data),
+      dia: data.day,
+      dose: doseNormalizada,
+      accion: eControl
+          ? 'CONTROL'
+          : doseNormalizada == '0'
+          ? 'NON TOMAR'
+          : 'TOMAR',
+      eControl: eControl,
+      diaSemanaTexto: diaSemana(data),
+    );
+    return ordenar(
+      AnaliseModel(
+        cabeceira: analise.cabeceira,
+        calendario: [...analise.calendario, dia],
+        historico: analise.historico,
+      ),
+    );
+  }
+
   static AnaliseModel ordenar(AnaliseModel analise) {
     final calendario = [...analise.calendario]
       ..sort((a, b) => a.data.compareTo(b.data));

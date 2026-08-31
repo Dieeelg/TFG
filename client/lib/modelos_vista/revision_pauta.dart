@@ -55,6 +55,29 @@ class RevisionPautaViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool engadirDia({
+    required DateTime data,
+    String? dose,
+    required bool eControl,
+  }) {
+    final dataIso = RevisionPauta.formatoIso(data);
+    if (_analise.calendario.any((dia) => dia.data == dataIso)) {
+      _erro = 'A data $dataIso xa existe na pauta.';
+      notifyListeners();
+      return false;
+    }
+
+    _analise = RevisionPauta.engadirDia(
+      _analise,
+      data: data,
+      dose: dose,
+      eControl: eControl,
+    );
+    _erro = null;
+    notifyListeners();
+    return true;
+  }
+
   DoseDiaModel eliminarDia(int indice) {
     final eliminado = _analise.calendario[indice];
     _analise = RevisionPauta.eliminarDia(_analise, indice);

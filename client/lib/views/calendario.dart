@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart'; // Calendario do tratamento.
 import 'package:provider/provider.dart';
-import '../modelos/dose_dia.dart';
 import '../modelos_vista/calendario.dart';
 import '../compoñentes/barra_navegacion_inferior.dart';
 
@@ -43,60 +42,17 @@ class _CalendarioView extends StatelessWidget {
                   style: TextStyle(fontSize: 16),
                 ),
                 const SizedBox(height: 16),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(18),
-                    child: Column(
-                      children: [
-                        const Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            Text(
-                              'Lun',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            Text(
-                              'Mar',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            Text(
-                              'Mér',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            Text(
-                              'Xov',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            Text(
-                              'Ven',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            Text(
-                              'Sáb',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            Text(
-                              'Dom',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 14),
-                        GridView.count(
-                          crossAxisCount: 7,
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          mainAxisSpacing: 10,
-                          crossAxisSpacing: 6,
-                          children: vm.pauta
-                              .map((dia) => _dia(dia, vm))
-                              .toList(),
-                        ),
-                      ],
+                if (vm.meses.isEmpty)
+                  const Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(20),
+                      child: Text('Non hai ningunha pauta gardada.'),
                     ),
+                  )
+                else
+                  ...vm.meses.expand(
+                    (mes) => [_mes(mes, vm), const SizedBox(height: 14)],
                   ),
-                ),
-                const SizedBox(height: 14),
                 Card(
                   child: ListTile(
                     contentPadding: const EdgeInsets.all(18),
@@ -198,7 +154,53 @@ class _CalendarioView extends StatelessWidget {
     );
   }
 
-  Widget _dia(DoseDiaModel dia, CalendarioViewModel vm) {
+  Widget _mes(MesCalendario mes, CalendarioViewModel vm) => Card(
+    child: Padding(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        children: [
+          Text(
+            '${_nomeMes(mes.mes)} ${mes.ano}',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+          const Row(
+            children: [
+              Expanded(child: _CabeceiraDia('Lun')),
+              Expanded(child: _CabeceiraDia('Mar')),
+              Expanded(child: _CabeceiraDia('Mér')),
+              Expanded(child: _CabeceiraDia('Xov')),
+              Expanded(child: _CabeceiraDia('Ven')),
+              Expanded(child: _CabeceiraDia('Sáb')),
+              Expanded(child: _CabeceiraDia('Dom')),
+            ],
+          ),
+          const SizedBox(height: 10),
+          GridView.count(
+            crossAxisCount: 7,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 4,
+            children: mes.celas.map((dia) => _dia(dia, vm)).toList(),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  Widget _dia(DiaCalendario? entrada, CalendarioViewModel vm) {
+    if (entrada == null) return const SizedBox.shrink();
+    final dia = entrada.dose;
+    if (dia == null) {
+      return Center(
+        child: Text(
+          '${entrada.data.day}',
+          style: const TextStyle(color: Colors.black38),
+        ),
+      );
+    }
+
     Color cor = const Color(0xFFE1E4E8);
     if (dia.dose == '0') {
       cor = const Color(0xFFFFD0C8);
@@ -220,6 +222,21 @@ class _CalendarioView extends StatelessWidget {
       ),
     );
   }
+
+  String _nomeMes(int mes) => const [
+    'Xaneiro',
+    'Febreiro',
+    'Marzo',
+    'Abril',
+    'Maio',
+    'Xuño',
+    'Xullo',
+    'Agosto',
+    'Setembro',
+    'Outubro',
+    'Novembro',
+    'Decembro',
+  ][mes - 1];
 
   Widget _resumo(String valor, String etiqueta, Color cor) => Expanded(
     child: SizedBox(
@@ -247,5 +264,18 @@ class _CalendarioView extends StatelessWidget {
         ],
       ),
     ),
+  );
+}
+
+class _CabeceiraDia extends StatelessWidget {
+  const _CabeceiraDia(this.texto);
+
+  final String texto;
+
+  @override
+  Widget build(BuildContext context) => Text(
+    texto,
+    textAlign: TextAlign.center,
+    style: const TextStyle(fontWeight: FontWeight.bold),
   );
 }

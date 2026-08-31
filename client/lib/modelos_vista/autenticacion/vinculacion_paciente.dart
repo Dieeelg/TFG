@@ -19,6 +19,7 @@ class VinculacionPacienteViewModel extends ChangeNotifier {
   final Future<String?> Function(String key) _ler;
   final bool _activarTimer;
   bool _tenSupervisor = false;
+  String? _erro;
 
   VinculacionPacienteViewModel({
     FirebaseAuth? autenticacion,
@@ -54,14 +55,17 @@ class VinculacionPacienteViewModel extends ChangeNotifier {
   bool get tenSupervisor => _tenSupervisor;
   String? get datosQR => _datosQR;
   bool get cargando => _cargando;
+  String? get erro => _erro;
 
   Future<void> xerarDatosVinculacion() async {
     _cargando = true;
+    _datosQR = null;
+    _erro = null;
     notifyListeners();
 
     try {
       final String uid = await _obterUid() ?? "sen_id";
-      String? token = await _obterToken();
+      final token = await _obterToken().timeout(const Duration(seconds: 15));
 
       if (token == null || token.isEmpty) {
         throw Exception('Non se puido obter o token de mensaxería');
@@ -70,7 +74,9 @@ class VinculacionPacienteViewModel extends ChangeNotifier {
 
       if (_activarTimer) _iniciarChequeoAutomatico();
     } catch (e) {
-      _datosQR = "erro_datos";
+      _datosQR = null;
+      _erro =
+          'Non se puido crear o código. Comproba a conexión e téntao de novo.';
     } finally {
       _cargando = false;
       notifyListeners();

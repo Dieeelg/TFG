@@ -18,7 +18,7 @@ class TestNotificacionsP2P(unittest.TestCase):
     @patch("app.routers.notificar.messaging.send", return_value="mensaxe-123")
     @patch("app.routers.notificar.messaging.Notification")
     @patch("app.routers.notificar.messaging.Message")
-    def test_envio_dos_catro_avisos_co_texto_correcto(
+    def test_envio_dos_avisos_co_texto_correcto(
         self, message_mock, notification_mock, send_mock
     ):
         textos = {
@@ -26,6 +26,7 @@ class TestNotificacionsP2P(unittest.TestCase):
             "NOVO_INFORME": ("Novo informe", "Actualizouse a folla de tratamento."),
             "TOMA_PENDENTE": ("Hora da toma", "Hai unha toma pendente de confirmar."),
             "TOMA_ESQUECIDA": ("Toma sen confirmar", "A toma segue sen confirmarse."),
+            "INFORME_RECIBIDO": ("Nova folla", "Recibiches unha nova folla de tratamento."),
         }
         mensaxe = MagicMock()
         message_mock.return_value = mensaxe

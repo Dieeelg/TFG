@@ -171,6 +171,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('O meu calendario'), findsOneWidget);
+    expect(find.text('Agosto 2026'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('25/08/2026'),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('25/08/2026'), findsOneWidget);
     expect(find.text('Quedan 4 días'), findsOneWidget);
     await tester.scrollUntilVisible(

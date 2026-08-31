@@ -69,6 +69,10 @@ class ServizoSincronizacionP2P {
         key: 'tokens_supervisores',
         value: jsonEncode(tokens),
       );
+      final vinculacion = await _cifrado.obterPorId(vinculacionId);
+      if (vinculacion != null) {
+        await _enviarEstadoCompleto(vinculacion);
+      }
       return;
     }
     if (tipo == 'DESVINCULAR_SUPERVISOR') {
@@ -153,6 +157,8 @@ class ServizoSincronizacionP2P {
       }
     } else if (tipo == 'INFORME_FRAGMENTO') {
       await _procesarFragmentoInforme(payload);
+    } else if (tipo == 'INFORME_RECIBIDO') {
+      return;
     } else if (tipo == 'CONFIGURACION_ACTUALIZADA') {
       final nome = payload['nome'] as String?;
       final hora = payload['horaToma'] as String?;
@@ -387,11 +393,14 @@ class ServizoSincronizacionP2P {
     if (vinculacion == null) {
       throw Exception('A vinculación non dispón dunha clave segura');
     }
-    await _enviarCifrado(
+    final enviada = await _enviarCifrado(
       vinculacion: vinculacion,
       payload: jsonEncode({'nome': nome, 'horaToma': horaToma}),
       tipoAviso: 'CONFIGURACION_ACTUALIZADA',
     );
+    if (!enviada) {
+      throw Exception('Non se puido enviar a configuración ao paciente');
+    }
   }
 
   Future<void> enviarInformeRemoto(
@@ -445,7 +454,7 @@ class ServizoSincronizacionP2P {
       final fin = (i + 1) * tamanho > json.length
           ? json.length
           : (i + 1) * tamanho;
-      await _enviarCifrado(
+      final enviado = await _enviarCifrado(
         vinculacion: vinculacion,
         payload: jsonEncode({
           'id': id,
@@ -454,6 +463,21 @@ class ServizoSincronizacionP2P {
           'datos': json.substring(i * tamanho, fin),
         }),
         tipoAviso: 'INFORME_FRAGMENTO',
+      );
+      if (!enviado) {
+        throw Exception(
+          'Non se puido enviar a folla completa ao dispositivo paciente',
+        );
+      }
+    }
+    final avisoEnviado = await _enviarCifrado(
+      vinculacion: vinculacion,
+      payload: '{}',
+      tipoAviso: 'INFORME_RECIBIDO',
+    );
+    if (!avisoEnviado) {
+      throw Exception(
+        'A folla enviouse pero non se puido entregar o aviso ao paciente',
       );
     }
   }

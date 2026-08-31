@@ -97,4 +97,32 @@ void main() {
       expect(vm.estadoDe('descoñecido'), isNull);
     },
   );
+
+  test('aliña cada mes co luns e separa os cambios de mes', () async {
+    final vm = CalendarioViewModel.conDependencias(
+      pecharTomasVencidas: () async {},
+      obterPauta: () async => [
+        dia('2026-08-01'),
+        dia('2026-08-31'),
+        dia('2026-09-01'),
+      ],
+      obterEstados: () async => {},
+      obterCabeceira: () async => null,
+    );
+
+    await vm.cargar();
+
+    expect(vm.meses, hasLength(2));
+    final agosto = vm.meses.first;
+    expect(agosto.mes, 8);
+    expect(agosto.celas.take(5), everyElement(isNull));
+    expect(agosto.celas[5]?.data.day, 1);
+    expect(agosto.celas[35]?.data.day, 31);
+    expect(agosto.celas[35]?.dose?.data, '2026-08-31');
+
+    final setembro = vm.meses.last;
+    expect(setembro.celas.first, isNull);
+    expect(setembro.celas[1]?.data.day, 1);
+    expect(setembro.celas[1]?.dose?.data, '2026-09-01');
+  });
 }

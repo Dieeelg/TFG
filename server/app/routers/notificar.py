@@ -1,7 +1,6 @@
-from fastapi import FastAPI, HTTPException, APIRouter
+from fastapi import HTTPException, APIRouter
 from firebase_admin import messaging
 
-from app.routers.extraccion import router
 from app.schemas.models import NotificacionP2P, NotificacionResponse
 
 router = APIRouter(
@@ -17,6 +16,7 @@ async def enviar_notif(data: NotificacionP2P):
             "NOVO_INFORME": ("Novo informe", "Actualizouse a folla de tratamento."),
             "TOMA_PENDENTE": ("Hora da toma", "Hai unha toma pendente de confirmar."),
             "TOMA_ESQUECIDA": ("Toma sen confirmar", "A toma segue sen confirmarse."),
+            "INFORME_RECIBIDO": ("Nova folla", "Recibiches unha nova folla de tratamento."),
         }
         titulo_corpo = textos.get(data.tipo_aviso)
         message = messaging.Message(

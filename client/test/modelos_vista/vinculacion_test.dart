@@ -50,7 +50,8 @@ void main() {
           ler: (_) async => null,
         );
         await senToken.xerarDatosVinculacion();
-        expect(senToken.datosQR, 'erro_datos');
+        expect(senToken.datosQR, isNull);
+        expect(senToken.erro, contains('Comproba a conexión'));
 
         final erro = VinculacionPacienteViewModel.conDependencias(
           obterUid: () async => 'uid',
@@ -60,7 +61,8 @@ void main() {
           ler: (_) async => null,
         );
         await erro.xerarDatosVinculacion();
-        expect(erro.datosQR, 'erro_datos');
+        expect(erro.datosQR, isNull);
+        expect(erro.erro, contains('Comproba a conexión'));
         senUid.dispose();
         senToken.dispose();
         erro.dispose();

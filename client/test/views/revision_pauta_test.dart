@@ -56,6 +56,7 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.text('Dose: 1/2'), findsOneWidget);
+    expect(find.text('Engadir dose ou control'), findsOneWidget);
     expect(find.text('Revisar correccións'), findsOneWidget);
     expect(find.text('Está todo correcto?'), findsNothing);
   });

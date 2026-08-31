@@ -90,7 +90,27 @@ class _VinculacionPacienteScreenState extends State<VinculacionPacienteScreen> {
                             ),
                           )
                         else
-                          const Text("Erro ao cargar os datos de vinculación"),
+                          Column(
+                            children: [
+                              const Icon(
+                                Icons.wifi_off_outlined,
+                                size: 48,
+                                color: Colors.redAccent,
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                vm.erro ??
+                                    'Non se puideron cargar os datos de vinculación.',
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 10),
+                              OutlinedButton.icon(
+                                onPressed: vm.xerarDatosVinculacion,
+                                icon: const Icon(Icons.refresh),
+                                label: const Text('Tentar de novo'),
+                              ),
+                            ],
+                          ),
 
                         SizedBox(
                           height: constraints.maxHeight >= 760 ? 24 : 12,

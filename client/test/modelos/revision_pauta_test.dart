@@ -87,6 +87,29 @@ void main() {
     expect(dia.accion, 'CONTROL');
   });
 
+  test('engade e ordena unha dose ou un día de control', () {
+    var actualizada = RevisionPauta.engadirDia(
+      analiseValida(),
+      data: DateTime(2026, 8, 7),
+      dose: '3/4',
+      eControl: false,
+    );
+    expect(actualizada.calendario.first.data, '2026-08-07');
+    expect(actualizada.calendario.first.dose, '3/4');
+    expect(actualizada.calendario.first.accion, 'TOMAR');
+    expect(actualizada.calendario.first.diaSemanaTexto, 'VENRES');
+
+    actualizada = RevisionPauta.engadirDia(
+      actualizada,
+      data: DateTime(2026, 8, 13),
+      dose: '1',
+      eControl: true,
+    );
+    expect(actualizada.calendario.last.eControl, isTrue);
+    expect(actualizada.calendario.last.dose, isNull);
+    expect(actualizada.calendario.last.accion, 'CONTROL');
+  });
+
   test('interpreta datas ISO e europeas e rexeita datas imposibles', () {
     expect(RevisionPauta.interpretarData('2026-08-21'), DateTime(2026, 8, 21));
     expect(RevisionPauta.interpretarData('21/8/2026'), DateTime(2026, 8, 21));
